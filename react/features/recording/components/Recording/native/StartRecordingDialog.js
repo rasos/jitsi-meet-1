@@ -69,6 +69,7 @@ class StartRecordingDialog extends AbstractStartRecordingDialog {
     _onSubmit: () => boolean;
     _onSelectedRecordingServiceChanged: (string) => void;
     _onSharingSettingChanged: () => void;
+    _toggleScreenshotCapture: () => void;
 }
 
 export default translate(connect(mapStateToProps)(StartRecordingDialog));
