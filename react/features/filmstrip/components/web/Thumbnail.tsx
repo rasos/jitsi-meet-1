@@ -1,6 +1,6 @@
 import { Theme } from '@mui/material';
 import clsx from 'clsx';
-import debounce from 'lodash/debounce';
+import { debounce } from 'lodash-es';
 import React, { Component, KeyboardEvent, RefObject, createRef } from 'react';
 import { WithTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
@@ -99,11 +99,6 @@ export interface IProps extends WithTranslation {
      * The audio track related to the participant.
      */
     _audioTrack?: ITrack;
-
-    /**
-     * Indicates whether the local video flip feature is disabled or not.
-     */
-    _disableLocalVideoFlip: boolean;
 
     /**
      * Indicates whether enlargement of tiles to fill the available space is disabled.
@@ -1024,7 +1019,6 @@ class Thumbnail extends Component<IProps, IState> {
     _renderParticipant(local = false) {
         const {
             _audioTrack,
-            _disableLocalVideoFlip,
             _gifSrc,
             _isMobile,
             _isMobilePortrait,
@@ -1043,7 +1037,7 @@ class Thumbnail extends Component<IProps, IState> {
         const styles = this._getStyles();
         let containerClassName = this._getContainerClassName();
         const videoTrackClassName
-            = !_disableLocalVideoFlip && _videoTrack && !_isScreenSharing && _localFlipX ? 'flipVideoX' : '';
+            = _videoTrack && !_isScreenSharing && _localFlipX ? 'flipVideoX' : '';
         const jitsiVideoTrack = _videoTrack?.jitsiTrack;
         const videoTrackId = jitsiVideoTrack?.getId();
         const videoEventListeners: any = {};
@@ -1252,7 +1246,6 @@ function _mapStateToProps(state: IReduxState, ownProps: any): Object {
     let _isMobilePortrait = false;
     const {
         defaultLocalDisplayName,
-        disableLocalVideoFlip,
         disableTileEnlargement,
         iAmRecorder,
         iAmSipGateway
@@ -1375,7 +1368,6 @@ function _mapStateToProps(state: IReduxState, ownProps: any): Object {
         _audioTrack,
         _currentLayout,
         _defaultLocalDisplayName: defaultLocalDisplayName,
-        _disableLocalVideoFlip: Boolean(disableLocalVideoFlip),
         _disableTileEnlargement: Boolean(disableTileEnlargement),
         _isActiveParticipant: isActiveParticipant,
         _isHidden: isLocal && iAmRecorder && !iAmSipGateway,
