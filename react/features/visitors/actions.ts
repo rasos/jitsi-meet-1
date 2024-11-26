@@ -11,10 +11,10 @@ import {
     SET_IN_VISITORS_QUEUE,
     SET_VISITORS_SUPPORTED,
     SET_VISITOR_DEMOTE_ACTOR,
-    UPDATE_VISITORS_COUNT,
     UPDATE_VISITORS_IN_QUEUE_COUNT,
     VISITOR_PROMOTION_REQUEST
 } from './actionTypes';
+import logger from './logger';
 import { IPromotionRequest } from './types';
 
 /**
@@ -95,6 +95,7 @@ export function demoteRequest(id: string) {
             dispatch(disconnect(true))
                 .then(() => {
                     dispatch(setPreferVisitor(true));
+                    logger.info('Dispatching connect to demote the local participant.');
 
                     return dispatch(connect());
                 });
@@ -197,21 +198,6 @@ export function setVisitorsSupported(value: boolean) {
     return {
         type: SET_VISITORS_SUPPORTED,
         value
-    };
-}
-
-/**
- * Visitors count has been updated.
- *
- * @param {number} count - The new visitors count.
- * @returns {{
- *     type: UPDATE_VISITORS_COUNT,
- * }}
- */
-export function updateVisitorsCount(count: number) {
-    return {
-        type: UPDATE_VISITORS_COUNT,
-        count
     };
 }
 
