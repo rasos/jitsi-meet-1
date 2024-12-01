@@ -11,6 +11,7 @@ import { isSharedVideoEnabled } from '../../functions';
 
 import VideoManager from './VideoManager';
 import YoutubeVideoManager from './YoutubeVideoManager';
+import PeerTubeVideoManager from './PeerTubeVideoManager';
 
 interface IProps {
 
@@ -110,6 +111,15 @@ class SharedVideo extends Component<IProps> {
             return null;
         }
 
+        // Handle PeerTube URLs
+        if (videoUrl.includes('/w/')) {
+            const urlParts = videoUrl.split('/w/');
+            const domain = urlParts[0];
+            const videoId = urlParts[1];
+            const embedUrl = `${domain}/videos/embed/${videoId}`;
+            return <PeerTubeVideoManager videoId={embedUrl} />;
+        }
+
         if (videoUrl.match(/http/)) {
             return <VideoManager videoId = { videoUrl } />;
         }
@@ -130,7 +140,7 @@ class SharedVideo extends Component<IProps> {
             return null;
         }
 
-        const className = !isResizing && isOwner ? '' : 'disable-pointer';
+        const className = !isResizing && isOwner ? '' : '';
 
         return (
             <div
