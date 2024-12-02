@@ -182,7 +182,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      * @returns {void}
      */
 // In AbstractVideoManager:
-    async processUpdatedProps() {
+    processUpdatedProps() {
         const { _status, _time, _isOwner, _muted } = this.props;
 
         logger.info(`this is the playback status ${this.getPlaybackStatus()}`);
@@ -194,26 +194,26 @@ class AbstractVideoManager extends PureComponent<IProps> {
         const playerTime = this.getTime();
 
         if (shouldSeekToPosition(Number(_time), Number(playerTime))) {
-            await this.seek(Number(_time));
+            this.seek(Number(_time));
         }
 
         if (this.getPlaybackStatus() !== _status) {
             if (_status === PLAYBACK_STATUSES.PLAYING) {
                 logger.info('Playing videoprocessUpdatedProps PLAYING');
-                await this.play();
+                this.play();
             }
 
             if (_status === PLAYBACK_STATUSES.PAUSED) {
                 logger.info('Playing videoprocessUpdatedProps PAUSED');
-                await this.pause();
+                this.pause();
             }
         }
 
         if (this.isMuted() !== _muted) {
             if (_muted) {
-                await this.mute();
+                this.mute();
             } else {
-                await this.unMute();
+                this.unMute();
             }
         }
     }
@@ -391,7 +391,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    async play() {
+    play() {
         // to be implemented by subclass
     }
 
@@ -400,7 +400,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    async pause() {
+    pause() {
         // to be implemented by subclass
     }
 
