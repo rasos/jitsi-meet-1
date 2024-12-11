@@ -46,33 +46,11 @@ class PeerTubeVideoManager extends AbstractVideoManager {
             return;
         }
 
-        try {
-            // If not the owner, sync time with owner's time before playing
-            if (!this.props._isOwner && this.props._time !== undefined) {
-                await this.seek(this.props._time);
-            }
-            
+        try {            
             await this.player.play();
             logger.info('Play command executed');
         } catch (error) {
             logger.error('Error playing:', error);
-        }
-    }
-
-    async getTime() {
-        this.onPlayerReady();
-        if (!this.player) {
-            logger.error(' no playergetting current time:', this._currentTime);
-            return this._currentTime;
-        }
-
-        try {
-            // this._currentTime = await this.player.isPlaying();
-            logger.error(' getting current time:', this._currentTime);
-            return this._currentTime;
-        } catch (error) {
-            logger.error('Error getting current time:', error);
-            return this._currentTime;
         }
     }
     
@@ -87,6 +65,22 @@ class PeerTubeVideoManager extends AbstractVideoManager {
             logger.info('Pause command executed');
         } catch (error) {
             logger.error('Error pausing:', error);
+        }
+    }
+
+    async getTime(): Promise<number> {
+        if (!this.player) {
+            logger.error('No player when getting current time:', this._currentTime);
+            return -1;
+        }
+        
+        try {
+            this._currentTime = await this.player.getCurrentTime();
+            logger.error('_currentTime:', this._currentTime);
+            return this._currentTime;
+        } catch (error) {
+            logger.error('Error getting current time:', error);
+            return -1;
         }
     }
 
@@ -190,8 +184,8 @@ class PeerTubeVideoManager extends AbstractVideoManager {
     onPlayerReady = async () => {
         if (!this.player) {
             const iframe = document.getElementById('sharedVideoPlayer');
-            if (!iframe) {
-                logger.error('Cannot find iframe element');
+            if (!iframe || !(iframe instanceof HTMLIFrameElement)) {
+                logger.error('Cannot find iframe element or element is not an iframe');
                 return;
             }
             this.player = new PeerTubePlayer(iframe);

@@ -1,4 +1,4 @@
-
+// @ts-expect-error
 import Logger from '@jitsi/logger';
 import { throttle } from 'lodash-es';
 import { PureComponent } from 'react';
@@ -178,30 +178,28 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-// In AbstractVideoManager:
-    processUpdatedProps() {
+    async processUpdatedProps() {
         const { _status, _time, _isOwner, _muted } = this.props;
-
-        logger.info(`this is the playback status ${this.getPlaybackStatus()}`);
 
         if (_isOwner) {
             return;
         }
 
-        const playerTime = this.getTime();
+        const playerTime = await this.getTime();
 
-        if (shouldSeekToPosition(Number(_time), Number(playerTime))) {
+        logger.info(`Time in proccessUpdated ${playerTime}`);
+
+        if (shouldSeekToPosition(Number(_time), Number(playerTime))) { //  && playerTime !== -1
             this.seek(Number(_time));
+            logger.info(`Time in proccessUpdated seek ${playerTime}`);
         }
 
         if (this.getPlaybackStatus() !== _status) {
             if (_status === PLAYBACK_STATUSES.PLAYING) {
-                logger.info('Playing videoprocessUpdatedProps PLAYING');
                 this.play();
             }
 
             if (_status === PLAYBACK_STATUSES.PAUSED) {
-                logger.info('Playing videoprocessUpdatedProps PAUSED');
                 this.pause();
             }
         }
@@ -422,9 +420,9 @@ class AbstractVideoManager extends PureComponent<IProps> {
     /**
      * Retrieves current time.
      *
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    async getTime() {
+    async getTime(): Promise<number> {
         return 0;
     }
 

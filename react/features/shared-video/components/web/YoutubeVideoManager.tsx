@@ -1,10 +1,7 @@
 /* eslint-disable no-invalid-this */
-/* eslint-disable */
-
 import React from 'react';
 import { connect } from 'react-redux';
 import YouTube from 'react-youtube';
-import logger from '../../logger';
 
 import { PLAYBACK_STATUSES } from '../../constants';
 
@@ -23,22 +20,32 @@ class YoutubeVideoManager extends AbstractVideoManager {
     isPlayerAPILoaded: boolean;
     player?: any;
 
+    /**
+     * Initializes a new YoutubeVideoManager instance.
+     *
+     * @param {Object} props - This component's props.
+     *
+     * @returns {void}
+     */
     constructor(props: IProps) {
         super(props);
-        logger.info("YTVM: Constructor initialized", { props });
+
         this.isPlayerAPILoaded = false;
     }
 
+    /**
+     * Indicates the playback state of the video.
+     *
+     * @returns {string}
+     */
     getPlaybackStatus() {
         let status;
 
         if (!this.player) {
-            logger.info("YTVM: GetPlaybackStatus called but player not initialized");
             return;
         }
 
         const playerState = this.player.getPlayerState();
-        logger.info("YTVM: Current player state", { playerState });
 
         if (playerState === YouTube.PlayerState.PLAYING) {
             status = PLAYBACK_STATUSES.PLAYING;
@@ -48,67 +55,106 @@ class YoutubeVideoManager extends AbstractVideoManager {
             status = PLAYBACK_STATUSES.PAUSED;
         }
 
-        logger.info("YTVM: Playback status", { status });
         return status;
     }
 
+    /**
+     * Indicates whether the video is muted.
+     *
+     * @returns {boolean}
+     */
     isMuted() {
-        const muted = this.player?.isMuted();
-        logger.info("YTVM: Mute status checked", { muted });
-        return muted;
+        return this.player?.isMuted();
     }
 
+    /**
+     * Retrieves current volume.
+     *
+     * @returns {number}
+     */
     getVolume() {
-        const volume = this.player?.getVolume();
-        logger.info("YTVM: Volume retrieved", { volume });
-        return volume;
+        return this.player?.getVolume();
     }
 
-    getTime() {
+    /**
+     * Retrieves current time.
+     *
+     * @returns {Promise<number>}
+     */
+    async getTime(): Promise<number> {
         const time = this.player?.getCurrentTime();
-        logger.info("YTVM: Current time retrieved", { time });
+
         return time;
     }
 
+
+    /**
+     * Seeks video to provided time.
+     *
+     * @param {number} time - The time to seek to.
+     *
+     * @returns {void}
+     */
     seek(time: number) {
-        logger.info("YTVM: Seeking to time", { time });
         return this.player?.seekTo(time);
     }
 
+    /**
+     * Plays video.
+     *
+     * @returns {void}
+     */
     play() {
-        logger.info("YTVM: Play called");
         return this.player?.playVideo();
     }
 
+    /**
+     * Pauses video.
+     *
+     * @returns {void}
+     */
     pause() {
-        logger.info("YTVM: Pause called");
         return this.player?.pauseVideo();
     }
 
+    /**
+     * Mutes video.
+     *
+     * @returns {void}
+     */
     mute() {
-        logger.info("YTVM: Mute called");
         return this.player?.mute();
     }
 
+    /**
+     * Unmutes video.
+     *
+     * @returns {void}
+     */
     unMute() {
-        logger.info("YTVM: Unmute called");
         return this.player?.unMute();
     }
 
+    /**
+     * Disposes of the current video player.
+     *
+     * @returns {void}
+     */
     dispose() {
-        logger.info("YTVM: Disposing player");
         if (this.player) {
             this.player.destroy();
             this.player = null;
         }
     }
 
+    /**
+     * Fired on play state toggle.
+     *
+     * @param {Object} event - The yt player stateChange event.
+     *
+     * @returns {void}
+     */
     onPlayerStateChange = (event: any) => {
-        logger.info("YTVM: Player state changed", { 
-            newState: event.data,
-            stateName: this.getStateName(event.data)
-        });
-
         if (event.data === YouTube.PlayerState.PLAYING) {
             this.onPlay();
         } else if (event.data === YouTube.PlayerState.PAUSED) {
@@ -116,40 +162,31 @@ class YoutubeVideoManager extends AbstractVideoManager {
         }
     };
 
-    // Helper method to convert YouTube state numbers to readable names
-    private getStateName(state: number): string {
-        const states = {
-            [-1]: 'UNSTARTED',
-            [0]: 'ENDED',
-            [1]: 'PLAYING',
-            [2]: 'PAUSED',
-            [3]: 'BUFFERING',
-            [5]: 'CUED'
-        };
-        return states[state] || 'UNKNOWN';
-    }
-
+    /**
+     * Fired when youtube player is ready.
+     *
+     * @param {Object} event - The youtube player event.
+     *
+     * @returns {void}
+     */
     onPlayerReady = (event: any) => {
         const { _isOwner } = this.props;
-        logger.info("YTVM: Player ready", { isOwner: _isOwner });
 
         this.player = event.target;
 
         this.player.addEventListener('onVolumeChange', () => {
-            logger.info("YTVM: Volume changed", { newVolume: this.getVolume() });
             this.onVolumeChange();
         });
 
         if (_isOwner) {
-            logger.info("YTVM: Setting up owner-specific event listeners");
             this.player.addEventListener('onVideoProgress', this.throttledFireUpdateSharedVideoEvent);
         }
 
-        logger.info("YTVM: Starting initial playback");
         this.play();
 
+        // sometimes youtube can get muted state from previous videos played in the browser
+        // and as we are disabling controls we want to unmute it
         if (this.isMuted()) {
-            logger.info("YTVM: Initial state was muted, unmuting");
             this.unMute();
         }
     };
@@ -171,26 +208,21 @@ class YoutubeVideoManager extends AbstractVideoManager {
                     'rel': 0
                 }
             },
-            onError: (e: any) => {
-                logger.error("YTVM: Player error occurred", { error: e });
-                this.onError(e);
-            },
+            onError: (e: any) => this.onError(e),
             onReady: this.onPlayerReady,
             onStateChange: this.onPlayerStateChange,
             videoId
         };
 
-        logger.info("YTVM: Player options configured", { 
-            videoId, 
-            isOwner: _isOwner,
-            showControls
-        });
-        
         return options;
     };
 
+    /**
+     * Implements React Component's render.
+     *
+     * @inheritdoc
+     */
     render() {
-        logger.info("YTVM: Rendering YouTube component");
         return (
             <YouTube
                 { ...this.getPlayerOptions() } />

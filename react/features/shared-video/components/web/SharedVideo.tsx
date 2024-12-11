@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
+// @ts-ignore
 import Filmstrip from '../../../../../modules/UI/videolayout/Filmstrip';
 import { IReduxState } from '../../../app/types';
 import { getLocalParticipant } from '../../../base/participants/functions';
@@ -11,6 +12,7 @@ import { isSharedVideoEnabled } from '../../functions';
 import PeerTubeVideoManager from './PeerTubeVideoManager';
 import VideoManager from './VideoManager';
 import YoutubeVideoManager from './YoutubeVideoManager';
+import logger from '../../logger';
 
 interface IProps {
 
@@ -111,10 +113,27 @@ class SharedVideo extends Component<IProps> {
         }
 
         // Handle PeerTube URLs
+        // https://peertube2.cpy.re/w/p/kvt6sHBmzTa4T2kMrVU2eW
+        // https://fair.tube/w/i2vvUyXLQ1KZNvf5onNRNE
+        // TODO fix if in playlist!
+        // https://peertube2.cpy.re/video/embed/9dfae6b7-2ad1-4ded-9dab-e05cf699e51c
         if (videoUrl.includes('/w/')) {
             const urlParts = videoUrl.split('/w/');
             const domain = urlParts[0];
-            const videoId = urlParts[1];
+            let videoId = urlParts[1];
+
+            // Check if the URL contains '/p/'
+            if (videoUrl.includes('/p/')) {
+                // Handle playlist URL
+                videoId = urlParts[1];
+                const embedUrl = `${domain}/video-playlists/embed/${videoId}`;
+
+                logger.info('Embed URL:', embedUrl);
+
+                return <PeerTubeVideoManager videoId = { embedUrl } />;
+            }
+
+            // Handle regular video URL
             const embedUrl = `${domain}/videos/embed/${videoId}`;
 
             return <PeerTubeVideoManager videoId = { embedUrl } />;

@@ -78,9 +78,9 @@ class VideoManager extends AbstractVideoManager {
     /**
      * Retrieves current time.
      *
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    getTime() {
+    async getTime(): Promise<number> {
         return Number(this.player?.currentTime);
     }
 
