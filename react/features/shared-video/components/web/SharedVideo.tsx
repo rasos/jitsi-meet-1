@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
-// @ts-expect-error
 import Filmstrip from '../../../../../modules/UI/videolayout/Filmstrip';
 import { IReduxState } from '../../../app/types';
 import { getLocalParticipant } from '../../../base/participants/functions';
@@ -9,9 +8,9 @@ import { getVerticalViewMaxWidth } from '../../../filmstrip/functions.web';
 import { getToolboxHeight } from '../../../toolbox/functions.web';
 import { isSharedVideoEnabled } from '../../functions';
 
+import PeerTubeVideoManager from './PeerTubeVideoManager';
 import VideoManager from './VideoManager';
 import YoutubeVideoManager from './YoutubeVideoManager';
-import PeerTubeVideoManager from './PeerTubeVideoManager';
 
 interface IProps {
 
@@ -117,7 +116,8 @@ class SharedVideo extends Component<IProps> {
             const domain = urlParts[0];
             const videoId = urlParts[1];
             const embedUrl = `${domain}/videos/embed/${videoId}`;
-            return <PeerTubeVideoManager videoId={embedUrl} />;
+
+            return <PeerTubeVideoManager videoId = { embedUrl } />;
         }
 
         if (videoUrl.match(/http/)) {

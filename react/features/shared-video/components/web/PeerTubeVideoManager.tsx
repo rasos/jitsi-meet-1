@@ -36,9 +36,9 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         return this._volume * 100;
     }
 
-    getTime() {
-        return this._currentTime;
-    }
+    // getTime() {
+    //     return this._currentTime;
+    // }
 
     async play() {
         if (!this.player) {
@@ -47,10 +47,32 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
 
         try {
-            this.player.play();
+            // If not the owner, sync time with owner's time before playing
+            if (!this.props._isOwner && this.props._time !== undefined) {
+                await this.seek(this.props._time);
+            }
+            
+            await this.player.play();
             logger.info('Play command executed');
         } catch (error) {
             logger.error('Error playing:', error);
+        }
+    }
+
+    async getTime() {
+        this.onPlayerReady();
+        if (!this.player) {
+            logger.error(' no playergetting current time:', this._currentTime);
+            return this._currentTime;
+        }
+
+        try {
+            // this._currentTime = await this.player.isPlaying();
+            logger.error(' getting current time:', this._currentTime);
+            return this._currentTime;
+        } catch (error) {
+            logger.error('Error getting current time:', error);
+            return this._currentTime;
         }
     }
     
@@ -208,7 +230,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         return (
             <iframe
                 id="sharedVideoPlayer"
-                src={`${videoId}?api=1&controls=${showControls}&autoplay=1`}
+                src={`${videoId}?api=1&autoplay=1&controls=${showControls}`}
                 width="100%"
                 height="100%"
                 allow="fullscreen"

@@ -1,5 +1,3 @@
-// @ts-expect-error
-/* eslint-disable */
 
 import Logger from '@jitsi/logger';
 import { throttle } from 'lodash-es';
@@ -107,7 +105,6 @@ export interface IProps {
      */
     _videoUrl?: string;
 
-    language: string;
 
     /**
       * The video id.
@@ -427,7 +424,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {number}
      */
-    getTime() {
+    async getTime() {
         return 0;
     }
 
