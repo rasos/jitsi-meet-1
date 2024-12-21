@@ -91,7 +91,7 @@ class VideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    seek(time: number) {
+    async seek(time: number) {
         if (this.player) {
             this.player.currentTime = time;
         }

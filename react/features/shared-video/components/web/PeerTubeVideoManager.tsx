@@ -24,8 +24,29 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         this.currentPlaybackState = PLAYBACK_STATUSES.PAUSED;
     }
 
-    getPlaybackStatus() {
-        return this.currentPlaybackState;
+    async getPlaybackStatus() {
+        let status;
+    
+        const iframe = document.getElementById('sharedVideoPlayer');
+        if (!iframe || !(iframe instanceof HTMLIFrameElement)) {
+            logger.error('Cannot find iframe element or element is not an iframe');
+            return;
+        }
+        
+        try {
+            const isPlaying = await this.player.isPlaying();
+
+            if (isPlaying) {
+                status = PLAYBACK_STATUSES.PLAYING;
+            } else {
+                status = PLAYBACK_STATUSES.PAUSED;
+            }
+    
+            return status;
+        } catch (error) {
+            logger.error('Error getting playback status:', error);
+            return PLAYBACK_STATUSES.PLAYING;
+        }
     }
 
     isMuted() {
@@ -77,7 +98,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         try {
             this._currentTime = await this.player.getCurrentTime();
             logger.error('_currentTime:', this._currentTime);
-            return this._currentTime;
+            return Number(this._currentTime);
         } catch (error) {
             logger.error('Error getting current time:', error);
             return -1;

@@ -190,11 +190,10 @@ class AbstractVideoManager extends PureComponent<IProps> {
         logger.info(`Time in proccessUpdated ${playerTime}`);
 
         if (shouldSeekToPosition(Number(_time), Number(playerTime))) { //  && playerTime !== -1
-            this.seek(Number(_time));
-            logger.info(`Time in proccessUpdated seek ${playerTime}`);
+            await this.seek(Number(_time));
         }
 
-        if (this.getPlaybackStatus() !== _status) {
+        if (await this.getPlaybackStatus() !== _status) {
             if (_status === PLAYBACK_STATUSES.PLAYING) {
                 this.play();
             }
@@ -275,8 +274,8 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    fireUpdatePlayingVideoEvent() {
-        if (this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING) {
+    async fireUpdatePlayingVideoEvent() {
+        if (await this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING) {
             this.fireUpdateSharedVideoEvent();
         }
     }
@@ -286,14 +285,13 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    fireUpdateSharedVideoEvent() {
+    async fireUpdateSharedVideoEvent() {
         const { _isOwner } = this.props;
 
         if (!_isOwner) {
             return;
         }
-
-        const status = this.getPlaybackStatus();
+        const status = await this.getPlaybackStatus();
 
         if (!Object.values(PLAYBACK_STATUSES).includes(status ?? '')) {
             return;
@@ -308,7 +306,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
         _setSharedVideoStatus({
             videoUrl: _videoUrl,
             status,
-            time: this.getTime(),
+            time: await this.getTime(),
             ownerId: _ownerId,
             muted: this.isMuted()
         });
@@ -322,8 +320,8 @@ class AbstractVideoManager extends PureComponent<IProps> {
      * @returns {boolean} Indicating if the volume of the shared video is
      * currently on.
      */
-    isSharedVideoVolumeOn() {
-        return this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING
+    async isSharedVideoVolumeOn() {
+        return await this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING
                 && !this.isMuted()
                 && Number(this.getVolume()) > 0;
     }
@@ -359,7 +357,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {string}
      */
-    getPlaybackStatus(): string | undefined {
+    async getPlaybackStatus(): Promise<string | undefined> {
         return;
     }
 
