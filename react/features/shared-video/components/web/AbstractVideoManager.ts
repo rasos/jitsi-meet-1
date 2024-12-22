@@ -320,9 +320,9 @@ class AbstractVideoManager extends PureComponent<IProps> {
      * @returns {boolean} Indicating if the volume of the shared video is
      * currently on.
      */
-    async isSharedVideoVolumeOn() {
-        return await this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING
-                && !this.isMuted()
+    isSharedVideoVolumeOn() {
+        // await this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING // remove calling getPlaybackStatus for now so we don't have to add async everywhere
+        return !this.isMuted()
                 && Number(this.getVolume()) > 0;
     }
 

@@ -38,7 +38,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {string}
      */
-    getPlaybackStatus() {
+    async getPlaybackStatus() {
         let status;
 
         if (!this.player) {
