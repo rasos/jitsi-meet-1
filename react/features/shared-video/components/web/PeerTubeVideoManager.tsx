@@ -13,6 +13,7 @@ import AbstractVideoManager, {
     _mapStateToProps
 } from './AbstractVideoManager';
 
+import i18next from '../../../base/i18n/i18next';
 class PeerTubeVideoManager extends AbstractVideoManager {
     isPlayerAPILoaded: boolean;
     player?: any;
@@ -242,10 +243,12 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         const { videoId, _isOwner } = this.props;
         const showControls = _isOwner ? 1 : 1;
 
+        const userLanguage = i18next.language
+
         return (
             <iframe
                 id="sharedVideoPlayer"
-                src={`${videoId}?api=1&autoplay=1&controls=${showControls}`}
+                src={`${videoId}?api=1&autoplay=1&controls=${showControls}&subtitle=${userLanguage}`}
                 width="100%"
                 height="100%"
                 allow="fullscreen"
