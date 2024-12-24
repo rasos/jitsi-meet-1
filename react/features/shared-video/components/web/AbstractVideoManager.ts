@@ -189,7 +189,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
 
         logger.info(`Time in proccessUpdated ${playerTime}`);
 
-        if (shouldSeekToPosition(Number(_time), Number(playerTime))) { //  && playerTime !== -1
+        if (shouldSeekToPosition(Number(_time), Number(playerTime))) {
             await this.seek(Number(_time));
         }
 
