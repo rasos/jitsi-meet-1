@@ -105,7 +105,7 @@ class SharedVideo extends Component<IProps> {
      *
      * @returns {Component}
      */
-    getManager() {
+    getManager(isPeertube: boolean) {
         const { videoUrl } = this.props;
 
         if (!videoUrl) {
@@ -117,7 +117,7 @@ class SharedVideo extends Component<IProps> {
         // https://fair.tube/w/i2vvUyXLQ1KZNvf5onNRNE
         // TODO fix if in playlist!
         // https://peertube2.cpy.re/video/embed/9dfae6b7-2ad1-4ded-9dab-e05cf699e51c
-        if (videoUrl.includes('/w/')) {
+        if (isPeertube) {
             const urlParts = videoUrl.split('/w/');
             const domain = urlParts[0];
             let videoId = urlParts[1];
@@ -153,20 +153,22 @@ class SharedVideo extends Component<IProps> {
      * @returns {React$Element}
      */
     render() {
-        const { isEnabled, isOwner, isResizing } = this.props;
+        const { isEnabled, isOwner, isResizing, videoUrl } = this.props;
+
+        const isPeertube = videoUrl?.includes('/w/') ?? false;;
 
         if (!isEnabled) {
             return null;
         }
 
-        const className = !isResizing && isOwner ? '' : '';
+        const className = (!isPeertube && (!isResizing && isOwner ? '' : 'disable-pointer')) || '';
 
         return (
             <div
                 className = { className }
                 id = 'sharedVideo'
                 style = { this.getDimensions() }>
-                {this.getManager()}
+                {this.getManager(isPeertube)}
             </div>
         );
     }

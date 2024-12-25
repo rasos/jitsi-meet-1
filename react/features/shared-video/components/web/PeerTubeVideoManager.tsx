@@ -98,7 +98,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         
         try {
             this._currentTime = await this.player.getCurrentTime();
-            logger.error('_currentTime:', this._currentTime);
+            logger.info('_currentTime:', this._currentTime);
             return Number(this._currentTime);
         } catch (error) {
             logger.error('Error getting current time:', error);
