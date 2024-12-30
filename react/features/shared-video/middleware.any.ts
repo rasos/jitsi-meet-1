@@ -135,6 +135,7 @@ MiddlewareRegistry.register(store => next => action => {
         const { sharedVideoAllowedURLDomains: allowedURLDomainsFromBranding = [] } = state['features/dynamic-branding'];
 
         dispatch(setAllowedUrlDomians([
+            "tube.dev.displ.eu", "displayeurope.video", "fair.tube",
             ...DEFAULT_ALLOWED_URL_DOMAINS,
             ...allowedURLDomainsFromBranding,
             ...allowedURLDomainsFromConfig
