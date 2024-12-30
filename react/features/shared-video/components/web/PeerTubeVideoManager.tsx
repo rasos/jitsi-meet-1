@@ -241,7 +241,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
 
     render() {
         const { videoId, _isOwner } = this.props;
-        const showControls = _isOwner ? 1 : 1;
+        const showControls = _isOwner ? 1 : 1; // maybe one day we won't show the controls
 
         const userLanguage = i18next.language
 
