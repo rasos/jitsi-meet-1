@@ -20,6 +20,7 @@ import Whiteboard from '../../whiteboard/components/web/Whiteboard';
 import { isWhiteboardEnabled } from '../../whiteboard/functions';
 import { setSeeWhatIsBeingShared } from '../actions.web';
 import { getLargeVideoParticipant } from '../functions';
+import { setIsPeerTube } from '../../shared-video/actions.any';
 
 import ScreenSharePlaceholder from './ScreenSharePlaceholder.web';
 
@@ -115,6 +116,11 @@ interface IProps {
     _whiteboardEnabled: boolean;
 
     /**
+     * The shared video url.
+     */
+    _videoUrl?: string;
+
+    /**
      * The Redux dispatch function.
      */
     dispatch: IStore['dispatch'];
@@ -178,6 +184,10 @@ class LargeVideo extends Component<IProps> {
         if (_largeVideoParticipantId === _localParticipantId
             && prevProps._hideSelfView !== _hideSelfView) {
             VideoLayout.updateLargeVideo(_largeVideoParticipantId, true, false);
+        }
+
+        if (prevProps._videoUrl !== this.props._videoUrl) {
+            handleVideoUrlChange(this.props);
         }
     }
 
@@ -354,6 +364,7 @@ function _mapStateToProps(state: IReduxState) {
     const { width: verticalFilmstripWidth, visible } = state['features/filmstrip'];
     const { defaultLocalDisplayName, hideDominantSpeakerBadge } = state['features/base/config'];
     const { seeWhatIsBeingShared } = state['features/large-video'];
+    const { videoUrl } = state['features/shared-video'];
     const localParticipantId = getLocalParticipant(state)?.id;
     const largeVideoParticipant = getLargeVideoParticipant(state);
     const videoTrack = getVideoTrackByParticipant(state, largeVideoParticipant);
@@ -378,8 +389,42 @@ function _mapStateToProps(state: IReduxState) {
         _verticalFilmstripWidth: verticalFilmstripWidth.current,
         _verticalViewMaxWidth: getVerticalViewMaxWidth(state),
         _visibleFilmstrip: visible,
-        _whiteboardEnabled: isWhiteboardEnabled(state)
+        _whiteboardEnabled: isWhiteboardEnabled(state),
+        _videoUrl: videoUrl
     };
+}
+
+/**
+ * Checks if a URL is from PeerTube by fetching nodeinfo.
+ *
+ * @param {string} url - The URL to check.
+ * @returns {Promise<boolean>}
+ */
+async function checkIsPeerTube(url: string) {
+    try {
+        const baseUrl = new URL(url).origin;
+        const response = await fetch(`${baseUrl}/nodeinfo/2.0.json`);
+        const data = await response.json();
+        
+        return data?.software?.name?.toLowerCase() === 'peertube';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Side effect to check PeerTube status when video URL changes.
+ *
+ * @param {Object} props - The component props.
+ * @param {Function} dispatch - The Redux dispatch function.
+ */
+async function handleVideoUrlChange(props: IProps) {
+    const { _videoUrl } = props;
+    
+    if (_videoUrl) {
+        const isPeerTube = await checkIsPeerTube(_videoUrl);
+        props.dispatch(setIsPeerTube(isPeerTube));
+    }
 }
 
 export default connect(_mapStateToProps)(LargeVideo);

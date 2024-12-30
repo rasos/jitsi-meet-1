@@ -55,6 +55,11 @@ interface IProps {
      * The shared video url.
      */
     videoUrl?: string;
+
+    /**
+     * Whether the video is from PeerTube.
+     */
+    isPeerTube?: boolean;
 }
 
 /** .
@@ -112,11 +117,6 @@ class SharedVideo extends Component<IProps> {
             return null;
         }
 
-        // Handle PeerTube URLs
-        // https://peertube2.cpy.re/w/p/kvt6sHBmzTa4T2kMrVU2eW
-        // https://fair.tube/w/i2vvUyXLQ1KZNvf5onNRNE
-        // TODO fix if in playlist!
-        // https://peertube2.cpy.re/video/embed/9dfae6b7-2ad1-4ded-9dab-e05cf699e51c
         if (isPeertube) {
             const urlParts = videoUrl.split('/w/');
             const domain = urlParts[0];
@@ -153,22 +153,21 @@ class SharedVideo extends Component<IProps> {
      * @returns {React$Element}
      */
     render() {
-        const { isEnabled, isOwner, isResizing, videoUrl } = this.props;
+        const { isEnabled, isOwner, isResizing, isPeerTube  } = this.props;
 
-        const isPeertube = videoUrl?.includes('/w/') ?? false;;
 
         if (!isEnabled) {
             return null;
         }
 
-        const className = (!isPeertube && (!isResizing && isOwner ? '' : 'disable-pointer')) || '';
+        const className = (!isPeerTube && (!isResizing && isOwner ? '' : 'disable-pointer')) || '';
 
         return (
             <div
                 className = { className }
                 id = 'sharedVideo'
                 style = { this.getDimensions() }>
-                {this.getManager(isPeertube)}
+                {this.getManager(isPeerTube ?? false)}
             </div>
         );
     }
@@ -183,7 +182,7 @@ class SharedVideo extends Component<IProps> {
  * @returns {IProps}
  */
 function _mapStateToProps(state: IReduxState) {
-    const { ownerId, videoUrl } = state['features/shared-video'];
+    const { ownerId, videoUrl, isPeerTube } = state['features/shared-video'];
     const { clientHeight, clientWidth } = state['features/base/responsive-ui'];
     const { visible, isResizing } = state['features/filmstrip'];
 
@@ -197,7 +196,8 @@ function _mapStateToProps(state: IReduxState) {
         isEnabled: isSharedVideoEnabled(state),
         isOwner: ownerId === localParticipant?.id,
         isResizing,
-        videoUrl
+        videoUrl,
+        isPeerTube
     };
 }
 

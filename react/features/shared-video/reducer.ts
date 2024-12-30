@@ -5,7 +5,8 @@ import {
     SET_ALLOWED_URL_DOMAINS,
     SET_CONFIRM_SHOW_VIDEO,
     SET_DISABLE_BUTTON,
-    SET_SHARED_VIDEO_STATUS
+    SET_SHARED_VIDEO_STATUS,
+    SET_IS_PEERTUBE 
 } from './actionTypes';
 import { DEFAULT_ALLOWED_URL_DOMAINS } from './constants';
 
@@ -23,6 +24,7 @@ export interface ISharedVideoState {
     time?: number;
     videoUrl?: string;
     volume?: number;
+    isPeerTube?: boolean;
 }
 
 /**
@@ -67,6 +69,12 @@ ReducerRegistry.register<ISharedVideoState>('features/shared-video',
             allowedUrlDomains: action.allowedUrlDomains
         };
     }
+
+    case SET_IS_PEERTUBE:
+        return {
+            ...state,
+            isPeerTube: action.isPeerTube
+        };
 
     default:
         return state;

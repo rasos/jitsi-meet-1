@@ -7,7 +7,8 @@ import {
     RESET_SHARED_VIDEO_STATUS,
     SET_ALLOWED_URL_DOMAINS,
     SET_CONFIRM_SHOW_VIDEO,
-    SET_SHARED_VIDEO_STATUS
+    SET_SHARED_VIDEO_STATUS,
+    SET_IS_PEERTUBE
 } from './actionTypes';
 import { ShareVideoConfirmDialog, SharedVideoDialog } from './components';
 import { PLAYBACK_START, PLAYBACK_STATUSES } from './constants';
@@ -199,5 +200,21 @@ export function showConfirmPlayingDialog(actor: String, onSubmit: Function) {
 export function hideConfirmPlayingDialog() {
     return (dispatch: IStore['dispatch']) => {
         dispatch(hideDialog(ShareVideoConfirmDialog));
+    };
+}
+
+/**
+ * Sets whether the shared video is from PeerTube.
+ *
+ * @param {boolean} isPeerTube - Whether the video is from PeerTube.
+ * @returns {{
+ *     type: SET_IS_PEERTUBE,
+ *     isPeerTube: boolean
+ * }}
+ */
+export function setIsPeerTube(isPeerTube: boolean) {
+    return {
+        type: SET_IS_PEERTUBE,
+        isPeerTube
     };
 }
