@@ -7,8 +7,6 @@ import { determineTranscriptionLanguage } from '../../transcribing/functions';
 import { IStateful } from '../app/types';
 import { JitsiTrackErrors } from '../lib-jitsi-meet';
 import {
-    hiddenParticipantJoined,
-    hiddenParticipantLeft,
     participantJoined,
     participantLeft
 } from '../participants/actions';
@@ -85,10 +83,9 @@ export function commonUserJoinedHandling(
     const id = user.getId();
     const displayName = user.getDisplayName();
 
-    if (user.isHidden()) {
-        dispatch(hiddenParticipantJoined(id, displayName));
-    } else {
+    if (!user.isHidden()) {
         const isReplacing = user?.isReplacing();
+        const isPromoted = conference?.getMetadataHandler().getMetadata()?.visitors?.promoted?.[id];
 
         // the identity and avatar come from jwt and never change in the presence
         dispatch(participantJoined({
@@ -99,6 +96,7 @@ export function commonUserJoinedHandling(
             name: displayName,
             presence: user.getStatus(),
             role: user.getRole(),
+            isPromoted,
             isReplacing,
             sources: user.getSources()
         }));
@@ -122,9 +120,7 @@ export function commonUserLeftHandling(
         user: any) {
     const id = user.getId();
 
-    if (user.isHidden()) {
-        dispatch(hiddenParticipantLeft(id));
-    } else {
+    if (!user.isHidden()) {
         const isReplaced = user.isReplaced?.();
 
         dispatch(participantLeft(id, conference, { isReplaced }));
@@ -212,6 +208,7 @@ export function getConferenceOptions(stateful: IStateful) {
 
     const config = state['features/base/config'];
     const { locationURL } = state['features/base/connection'];
+    const { defaultTranscriptionLanguage } = state['features/dynamic-branding'];
     const { tenant } = state['features/base/jwt'];
     const { email, name: nick } = getLocalParticipant(state) ?? {};
     const options: any = { ...config };
@@ -233,7 +230,8 @@ export function getConferenceOptions(stateful: IStateful) {
     }
 
     options.applicationName = getName();
-    options.transcriptionLanguage = determineTranscriptionLanguage(options);
+    options.transcriptionLanguage
+        = defaultTranscriptionLanguage ?? determineTranscriptionLanguage(options);
 
     // Disable analytics, if requested.
     if (options.disableThirdPartyRequests) {
@@ -395,6 +393,19 @@ export function isP2pActive(stateful: IStateful): boolean | null {
     }
 
     return conference.isP2PActive();
+}
+
+/**
+ * Returns whether the current conference has audio recording property which is on.
+ *
+ * @param {IStateful} stateful - The redux store, state, or {@code getState} function.
+ * @returns {boolean|null}
+ */
+export function isConferenceAudioRecordingOn(stateful: IStateful): boolean | null {
+    const state = getConferenceState(toState(stateful));
+
+    // @ts-ignore
+    return state.properties?.['audio-recording-enabled'] === 'true';
 }
 
 /**

@@ -352,19 +352,19 @@ export function createAndAddInitialAVTracks(devices: Array<MediaType>) {
  * Creates the initial audio/video tracks.
  *
  * @param {ICreateInitialTracksOptions} options - Options for creating the audio/video tracks.
+ * @param {boolean} recordTimeMetrics - If true time metrics will be recorded.
  * @returns {Function}
  */
-export function createInitialAVTracks(options: ICreateInitialTracksOptions) {
+export function createInitialAVTracks(options: ICreateInitialTracksOptions, recordTimeMetrics = false) {
     return (dispatch: IStore['dispatch'], _getState: IStore['getState']) => {
         const {
             devices,
-            timeout,
-            firePermissionPromptIsShownEvent
+            timeout
         } = options;
 
         dispatch(gumPending(devices, IGUMPendingState.PENDING_UNMUTE));
 
-        return createLocalTracksF(options).then(tracks => {
+        return createLocalTracksF(options, undefined, recordTimeMetrics).then(tracks => {
             return {
                 errors: {} as IInitialTracksErrors,
                 tracks
@@ -399,16 +399,14 @@ export function createInitialAVTracks(options: ICreateInitialTracksOptions) {
             if (devices.includes(MEDIA_TYPE.AUDIO)) {
                 gUMPromises.push(createLocalTracksF({
                     devices: [ MEDIA_TYPE.AUDIO ],
-                    timeout,
-                    firePermissionPromptIsShownEvent
+                    timeout
                 }));
             }
 
             if (devices.includes(MEDIA_TYPE.VIDEO)) {
                 gUMPromises.push(createLocalTracksF({
                     devices: [ MEDIA_TYPE.VIDEO ],
-                    timeout,
-                    firePermissionPromptIsShownEvent
+                    timeout
                 }));
             }
 

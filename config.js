@@ -84,10 +84,6 @@ var config = {
         // Allows the setting of a custom bandwidth value from the UI.
         // assumeBandwidth: true,
 
-        // Disables the End to End Encryption feature. Useful for debugging
-        // issues related to insertable streams.
-        // disableE2EE: false,
-
         // Enables the use of the codec selection API supported by the browsers .
         // enableCodecSelectionAPI: false,
 
@@ -213,14 +209,45 @@ var config = {
     // installation. Specifically, these files are needed:
     //   - https://meet.example.com/libs/krisp/krisp.mjs
     //   - https://meet.example.com/libs/krisp/models/model_8.kw
-    //   - https://meet.example.com/libs/krisp/models/model_16.kw
-    //   - https://meet.example.com/libs/krisp/models/model_32.kw
-    // NOTE: Krisp JS SDK v1.0.9 was tested.
+    //   - https://meet.example.com/libs/krisp/models/model_nc.kw
+    //   - https://meet.example.com/libs/krisp/models/model_bvc.kw
+    //   - https://meet.example.com/libs/krisp/assets/bvc-allowed.txt
+    //     In case when you have known BVC supported devices and you want to extend allowed devices list
+    //   - https://meet.example.com/libs/krisp/assets/bvc-allowed-ext.txt
+    //     In case when you have known BVC supported devices and you want to extend allowed devices list
+    //   - https://meet.example.com/libs/krisp/models/model_inbound_8.kw
+    //   - https://meet.example.com/libs/krisp/models/model_inbound_16.kw
+    //     In case when you want to use inbound noise suppression models
+    // NOTE: Krisp JS SDK v2.0.0 was tested.
     // noiseSuppression: {
     //     krisp: {
     //         enabled: false,
     //         logProcessStats: false,
     //         debugLogs: false,
+    //         useBVC: false,
+    //         bufferOverflowMS: 1000,
+    //         inboundModels: {
+    //             modelInbound8: 'model_inbound_8.kef',
+    //             modelInbound16: 'model_inbound_16.kef',
+    //         },
+    //         preloadInboundModels: {
+    //             modelInbound8: 'model_inbound_8.kef',
+    //             modelInbound16: 'model_inbound_16.kef',
+    //         },
+    //         preloadModels: {
+    //             modelBVC: 'model_bvc.kef',
+    //             model8: 'model_8.kef',
+    //             modelNC: 'model_nc_mq.kef',
+    //         },
+    //         models: {
+    //             modelBVC: 'model_bvc.kef',
+    //             model8: 'model_8.kef',
+    //             modelNV: 'model_nc_mq.kef',
+    //         },
+    //         bvc: {
+    //             allowedDevices: 'bvc-allowed.txt',
+    //             allowedDevicesExt: 'bvc-allowed-ext.txt',
+    //         }
     //     },
     // },
 
@@ -358,6 +385,8 @@ var config = {
     //    // If true, shows a warning label in the prejoin screen to point out the possibility that
     //    // the call you're joining might be recorded.
     //    // showPrejoinWarning: true,
+    //    // If true, the notification for recording start will display a link to download the cloud recording.
+    //    // showRecordingLink: true,
     // },
 
     // recordingService: {
@@ -430,7 +459,7 @@ var config = {
 
     //     // Translation languages.
     //     // Available languages can be found in
-    //     // ./src/react/features/transcribing/translation-languages.json.
+    //     // ./lang/translation-languages.json.
     //     translationLanguages: ['en', 'es', 'fr', 'ro'],
 
     //     // Important languages to show on the top of the language list.
@@ -451,6 +480,10 @@ var config = {
 
     //     // Enables automatic turning on transcribing when recording is started
     //     autoTranscribeOnRecord: false,
+
+    //     // Enables automatic request of subtitles when transcriber is present in the meeting, uses the default
+    //     // language that is set
+    //     autoCaptionOnTranscribe: false,
     // },
 
     // Misc
@@ -476,11 +509,16 @@ var config = {
     // videoQuality: {
     //
     //    // Provides a way to set the codec preference on desktop based endpoints.
-    //    codecPreferenceOrder: [ 'VP9', 'VP8', 'H264' ],
+    //    codecPreferenceOrder: [ 'VP9', 'VP8', 'H264', 'AV1' ],
     //
     //    // Provides a way to set the codec for screenshare.
     //    screenshareCodec: 'AV1',
     //    mobileScreenshareCodec: 'VP8',
+    //
+    //    // Enables the adaptive mode in the client that will make runtime adjustments to selected codecs and received
+    //    // videos for a better user experience. This mode will kick in only when CPU overuse is reported in the
+    //    // WebRTC statistics for the outbound video streams.
+    //    enableAdaptiveMode: false,
     //
     //    // Codec specific settings for scalability modes and max bitrates.
     //    av1: {
@@ -625,14 +663,6 @@ var config = {
     // Disables or enables REMB support in this client (default: enabled).
     // enableRemb: true,
 
-    // Enables ICE restart logic in LJM and displays the page reload overlay on
-    // ICE failure. Current disabled by default because it's causing issues with
-    // signaling when Octo is enabled. Also when we do an "ICE restart"(which is
-    // not a real ICE restart), the client maintains the TCC sequence number
-    // counter, but the bridge resets it. The bridge sends media packets with
-    // TCC sequence numbers starting from 0.
-    // enableIceRestart: false,
-
     // Enables forced reload of the client when the call is migrated as a result of
     // the bridge going down.
     // enableForcedReload: true,
@@ -766,6 +796,11 @@ var config = {
     //     hideDisplayName: false,
     //     // List of buttons to hide from the extra join options dropdown.
     //     hideExtraJoinButtons: ['no-audio', 'by-phone'],
+    //     // Configuration for pre-call test
+    //     // By setting preCallTestEnabled, you enable the pre-call test in the prejoin page.
+    //     // ICE server credentials need to be provided over the preCallTestICEUrl
+    //     preCallTestEnabled: false,
+    //     preCallTestICEUrl: ''
     // },
 
     // When 'true', the user cannot edit the display name.
@@ -872,7 +907,7 @@ var config = {
     // Overrides the buttons displayed in the main toolbar. Depending on the screen size the number of displayed
     // buttons varies from 2 buttons to 8 buttons. Every array in the mainToolbarButtons array will replace the
     // corresponding default buttons configuration matched by the number of buttons specified in the array. Arrays with
-    // more than 8 buttons or less then 2 buttons will be ignored. When there there isn't an override for a cerain
+    // more than 8 buttons or less then 2 buttons will be ignored. When there there isn't an override for a certain
     // configuration (for example when 3 buttons are displayed) the default jitsi-meet configuration will be used.
     // The order of the buttons in the array is preserved.
     // mainToolbarButtons: [
@@ -1226,6 +1261,7 @@ var config = {
     //     warning: '',
     //   },
     //   externallyManagedKey: false,
+    //   disabled: false,
     // },
 
     // Options related to end-to-end (participant to participant) ping.
@@ -1600,7 +1636,6 @@ var config = {
      iAmRecorder
      iAmSipGateway
      microsoftApiApplicationClientID
-     requireDisplayName
      */
 
     /**
@@ -1700,7 +1735,7 @@ var config = {
     //     'notify.participantsWantToJoin', // shown when lobby is enabled and participants request to join meeting
     //     'notify.passwordRemovedRemotely', // shown when a password has been removed remotely
     //     'notify.passwordSetRemotely', // shown when a password has been set remotely
-    //     'notify.raisedHand', // shown when a partcipant used raise hand,
+    //     'notify.raisedHand', // shown when a participant used raise hand,
     //     'notify.screenShareNoAudio', // shown when the audio could not be shared for the selected screen
     //     'notify.screenSharingAudioOnlyTitle', // shown when the best performance has been affected by screen sharing
     //     'notify.selfViewTitle', // show "You can always un-hide the self-view from settings"
@@ -1721,7 +1756,7 @@ var config = {
     //     'toolbar.noAudioSignalTitle', // shown when a broken mic is detected
     //     'toolbar.noisyAudioInputTitle', // shown when noise is detected for the current microphone
     //     'toolbar.talkWhileMutedPopup', // shown when user tries to speak while muted
-    //     'transcribing.failedToStart', // shown when transcribing fails to start
+    //     'transcribing.failed', // shown when transcribing fails
     // ],
 
     // List of notifications to be disabled. Works in tandem with the above setting.
@@ -1731,7 +1766,7 @@ var config = {
     // disableFilmstripAutohiding: false,
 
     // filmstrip: {
-    //     // Disable the vertical/horizonal filmstrip.
+    //     // Disable the vertical/horizontal filmstrip.
     //     disabled: false,
     //     // Disables user resizable filmstrip. Also, allows configuration of the filmstrip
     //     // (width, tiles aspect ratios) through the interfaceConfig options.

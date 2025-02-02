@@ -4,7 +4,6 @@ import { connect } from 'react-redux';
 // @ts-ignore
 import Filmstrip from '../../../../../modules/UI/videolayout/Filmstrip';
 import { IReduxState } from '../../../app/types';
-import { getLocalParticipant } from '../../../base/participants/functions';
 import { getVerticalViewMaxWidth } from '../../../filmstrip/functions.web';
 import { getToolboxHeight } from '../../../toolbox/functions.web';
 import { isSharedVideoEnabled } from '../../functions';
@@ -40,11 +39,6 @@ interface IProps {
      * Whether the shared video is enabled or not.
      */
     isEnabled: boolean;
-
-    /**
-     * Is the video shared by the local user.
-     */
-    isOwner: boolean;
 
     /**
      * Whether or not the user is actively resizing the filmstrip.
@@ -153,18 +147,15 @@ class SharedVideo extends Component<IProps> {
      * @returns {React$Element}
      */
     render() {
-        const { isEnabled, isOwner, isResizing, isPeerTube  } = this.props;
-
+        const { isEnabled, isResizing } = this.props;
 
         if (!isEnabled) {
             return null;
         }
 
-        const className = (!isPeerTube && (!isResizing && isOwner ? '' : 'disable-pointer')) || '';
-
         return (
             <div
-                className = { className }
+                className = { (isResizing && 'disable-pointer') || '' }
                 id = 'sharedVideo'
                 style = { this.getDimensions() }>
                 {this.getManager(isPeerTube ?? false)}
@@ -182,11 +173,9 @@ class SharedVideo extends Component<IProps> {
  * @returns {IProps}
  */
 function _mapStateToProps(state: IReduxState) {
-    const { ownerId, videoUrl, isPeerTube } = state['features/shared-video'];
+    const { videoUrl, isPeerTube } = state['features/shared-video'];
     const { clientHeight, clientWidth } = state['features/base/responsive-ui'];
     const { visible, isResizing } = state['features/filmstrip'];
-
-    const localParticipant = getLocalParticipant(state);
 
     return {
         clientHeight,
@@ -194,7 +183,6 @@ function _mapStateToProps(state: IReduxState) {
         filmstripVisible: visible,
         filmstripWidth: getVerticalViewMaxWidth(state),
         isEnabled: isSharedVideoEnabled(state),
-        isOwner: ownerId === localParticipant?.id,
         isResizing,
         videoUrl,
         isPeerTube

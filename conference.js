@@ -27,6 +27,7 @@ import {
     conferenceJoinInProgress,
     conferenceJoined,
     conferenceLeft,
+    conferencePropertiesChanged,
     conferenceSubjectChanged,
     conferenceTimestampChanged,
     conferenceUniqueIdSet,
@@ -136,11 +137,11 @@ import {
     isUserInteractionRequiredForUnmute
 } from './react/features/base/tracks/functions';
 import { downloadJSON } from './react/features/base/util/downloadJSON';
+import { getJitsiMeetGlobalNSConnectionTimes } from './react/features/base/util/helpers';
 import { openLeaveReasonDialog } from './react/features/conference/actions.web';
 import { showDesktopPicker } from './react/features/desktop-picker/actions';
 import { appendSuffix } from './react/features/display-name/functions';
 import { maybeOpenFeedbackDialog, submitFeedback } from './react/features/feedback/actions';
-import { initKeyboardShortcuts } from './react/features/keyboard-shortcuts/actions';
 import { maybeSetLobbyChatMessageListener } from './react/features/lobby/actions.any';
 import { setNoiseSuppressionEnabled } from './react/features/noise-suppression/actions';
 import {
@@ -154,7 +155,6 @@ import {
     NOTIFICATION_TIMEOUT_TYPE
 } from './react/features/notifications/constants';
 import { isModerationNotificationDisplayed } from './react/features/notifications/functions';
-import { mediaPermissionPromptVisibilityChanged } from './react/features/overlay/actions';
 import { suspendDetected } from './react/features/power-monitor/actions';
 import { initPrejoin, isPrejoinPageVisible } from './react/features/prejoin/functions';
 import { disableReceiver, stopReceiver } from './react/features/remote-control/actions';
@@ -164,6 +164,7 @@ import { toggleScreenshotCaptureSummary } from './react/features/screenshot-capt
 import { AudioMixerEffect } from './react/features/stream-effects/audio-mixer/AudioMixerEffect';
 import { createRnnoiseProcessor } from './react/features/stream-effects/rnnoise';
 import { handleToggleVideoMuted } from './react/features/toolbox/actions.any';
+import { transcriberJoined, transcriberLeft } from './react/features/transcribing/actions';
 import { muteLocal } from './react/features/video-menu/actions.any';
 
 const logger = Logger.getLogger(__filename);
@@ -413,9 +414,10 @@ export default {
      * without any audio tracks.
      * @param {boolean} options.startWithVideoMuted - will start the conference
      * without any video tracks.
+     * @param {boolean} recordTimeMetrics - If true time metrics will be recorded.
      * @returns {Promise<JitsiLocalTrack[]>, Object}
      */
-    createInitialLocalTracks(options = {}) {
+    createInitialLocalTracks(options = {}, recordTimeMetrics = false) {
         const errors = {};
 
         // Always get a handle on the audio input device so that we have statistics (such as "No audio input" or
@@ -432,15 +434,6 @@ export default {
             requestedVideo = true;
         }
 
-        if (!config.disableInitialGUM) {
-            JitsiMeetJS.mediaDevices.addEventListener(
-                JitsiMediaDevicesEvents.PERMISSION_PROMPT_IS_SHOWN,
-                browserName =>
-                    APP.store.dispatch(
-                        mediaPermissionPromptVisibilityChanged(true, browserName))
-            );
-        }
-
         let tryCreateLocalTracks = Promise.resolve([]);
 
         // On Electron there is no permission prompt for granting permissions. That's why we don't need to
@@ -449,8 +442,7 @@ export default {
         const timeout = browser.isElectron() ? 15000 : 60000;
         const audioOptions = {
             devices: [ MEDIA_TYPE.AUDIO ],
-            timeout,
-            firePermissionPromptIsShownEvent: true
+            timeout
         };
 
         // Spot uses the _desktopSharingSourceDevice config option to use an external video input device label as
@@ -485,23 +477,13 @@ export default {
         } else if (requestedAudio || requestedVideo) {
             tryCreateLocalTracks = APP.store.dispatch(createInitialAVTracks({
                 devices: initialDevices,
-                timeout,
-                firePermissionPromptIsShownEvent: true
-            })).then(({ tracks, errors: pErrors }) => {
+                timeout
+            }, recordTimeMetrics)).then(({ tracks, errors: pErrors }) => {
                 Object.assign(errors, pErrors);
 
                 return tracks;
             });
         }
-
-        // Hide the permissions prompt/overlay as soon as the tracks are created. Don't wait for the connection to
-        // be established, as in some cases like when auth is required, connection won't be established until the user
-        // inputs their credentials, but the dialog would be overshadowed by the overlay.
-        tryCreateLocalTracks.then(tracks => {
-            APP.store.dispatch(mediaPermissionPromptVisibilityChanged(false));
-
-            return tracks;
-        });
 
         return {
             tryCreateLocalTracks,
@@ -560,10 +542,10 @@ export default {
      * If prejoin page is enabled open an new connection in the background
      * and create local tracks.
      *
-     * @param {{ roomName: string }} options
+     * @param {{ roomName: string, shouldDispatchConnect }} options
      * @returns {Promise}
      */
-    async init({ roomName }) {
+    async init({ roomName, shouldDispatchConnect }) {
         const state = APP.store.getState();
         const initialOptions = {
             startAudioOnly: config.startAudioOnly,
@@ -571,8 +553,12 @@ export default {
             startWithAudioMuted: getStartWithAudioMuted(state) || isUserInteractionRequiredForUnmute(state),
             startWithVideoMuted: getStartWithVideoMuted(state) || isUserInteractionRequiredForUnmute(state)
         };
+        const connectionTimes = getJitsiMeetGlobalNSConnectionTimes();
+        const startTime = window.performance.now();
 
-        logger.debug(`Executed conference.init with roomName: ${roomName}`);
+        connectionTimes['conference.init.start'] = startTime;
+
+        logger.debug(`Executed conference.init with roomName: ${roomName} (performance.now=${startTime})`);
 
         this.roomName = roomName;
 
@@ -605,32 +591,65 @@ export default {
             return localTracks;
         };
         const { dispatch, getState } = APP.store;
-        const { tryCreateLocalTracks, errors } = this.createInitialLocalTracks(initialOptions);
+        const createLocalTracksStart = window.performance.now();
 
-        dispatch(setInitialGUMPromise(tryCreateLocalTracks.then(async tr => {
+        connectionTimes['conference.init.createLocalTracks.start'] = createLocalTracksStart;
+
+        logger.debug(`(TIME) createInitialLocalTracks: ${createLocalTracksStart} `);
+
+        const { tryCreateLocalTracks, errors } = this.createInitialLocalTracks(initialOptions, true);
+
+        tryCreateLocalTracks.then(async tr => {
+            const createLocalTracksEnd = window.performance.now();
+
+            connectionTimes['conference.init.createLocalTracks.end'] = createLocalTracksEnd;
+            logger.debug(`(TIME) createInitialLocalTracks finished: ${createLocalTracksEnd} `);
             const tracks = handleInitialTracks(initialOptions, tr);
 
             this._initDeviceList(true);
 
+            const { initialGUMPromise } = getState()['features/base/media'];
+
             if (isPrejoinPageVisible(getState())) {
                 dispatch(gumPending([ MEDIA_TYPE.AUDIO, MEDIA_TYPE.VIDEO ], IGUMPendingState.NONE));
-                dispatch(setInitialGUMPromise());
 
-                // Note: Not sure if initPrejoin needs to be async. But let's wait for it just to be sure the
-                // tracks are added.
+                // Since the conference is not yet created in redux this function will execute synchronous
+                // which will guarantee us that the local tracks are added to redux before we proceed.
                 initPrejoin(tracks, errors, dispatch);
+
+                connectionTimes['conference.init.end'] = window.performance.now();
+
+                // resolve the initialGUMPromise in case connect have finished so that we can proceed to join.
+                if (initialGUMPromise) {
+                    logger.debug('Resolving the initialGUM promise! (prejoinVisible=true)');
+                    initialGUMPromise.resolve({
+                        tracks,
+                        errors
+                    });
+                }
+
+                logger.debug('Clear the initialGUM promise! (prejoinVisible=true)');
+
+                // For prejoin we don't need the initial GUM promise since the tracks are already added to the store
+                // via initPrejoin
+                dispatch(setInitialGUMPromise());
             } else {
                 APP.store.dispatch(displayErrorsForCreateInitialLocalTracks(errors));
                 setGUMPendingStateOnFailedTracks(tracks, APP.store.dispatch);
+
+                connectionTimes['conference.init.end'] = window.performance.now();
+                if (initialGUMPromise) {
+                    logger.debug('Resolving the initialGUM promise!');
+                    initialGUMPromise.resolve({
+                        tracks,
+                        errors
+                    });
+                }
             }
+        });
 
-            return {
-                tracks,
-                errors
-            };
-        })));
-
-        if (!isPrejoinPageVisible(getState())) {
+        if (shouldDispatchConnect) {
+            logger.info('Dispatching connect from init since prejoin is not visible.');
             dispatch(connect());
         }
     },
@@ -1685,6 +1704,16 @@ export default {
         );
 
         room.on(
+            JitsiConferenceEvents.TRANSCRIPTION_STATUS_CHANGED,
+            (status, id, abruptly) => {
+                if (status === JitsiMeetJS.constants.transcriptionStatus.ON) {
+                    APP.store.dispatch(transcriberJoined(id));
+                } else if (status === JitsiMeetJS.constants.transcriptionStatus.OFF) {
+                    APP.store.dispatch(transcriberLeft(id, abruptly));
+                }
+            });
+
+        room.on(
             JitsiConferenceEvents.ENDPOINT_MESSAGE_RECEIVED,
             (participant, data) => {
                 APP.store.dispatch(endpointMessageReceived(participant, data));
@@ -1709,6 +1738,10 @@ export default {
         room.on(
             JitsiConferenceEvents.LOCK_STATE_CHANGED,
             (...args) => APP.store.dispatch(lockStateChanged(room, ...args)));
+
+        room.on(
+            JitsiConferenceEvents.PROPERTIES_CHANGED,
+            properties => APP.store.dispatch(conferencePropertiesChanged(properties)));
 
         room.on(JitsiConferenceEvents.KICKED, (participant, reason, isReplaced) => {
             if (isReplaced) {
@@ -2005,7 +2038,6 @@ export default {
 
         APP.UI.initConference();
 
-        dispatch(initKeyboardShortcuts());
         dispatch(conferenceJoined(room));
 
         const jwt = APP.store.getState()['features/base/jwt'];
@@ -2040,8 +2072,9 @@ export default {
             const { dispatch } = APP.store;
 
             return dispatch(getAvailableDevices())
-                .then(devices => {
-                    APP.UI.onAvailableDevicesChanged(devices);
+                .then(() => {
+                    this.updateAudioIconEnabled();
+                    this.updateVideoIconEnabled();
                 });
         }
 
@@ -2206,7 +2239,8 @@ export default {
 
         return Promise.all(promises)
             .then(() => {
-                APP.UI.onAvailableDevicesChanged(filteredDevices);
+                this.updateAudioIconEnabled();
+                this.updateVideoIconEnabled();
             });
     },
 

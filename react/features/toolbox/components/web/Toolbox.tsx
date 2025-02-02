@@ -8,11 +8,12 @@ import { isMobileBrowser } from '../../../base/environment/utils';
 import { getLocalParticipant, isLocalParticipantModerator } from '../../../base/participants/functions';
 import ContextMenu from '../../../base/ui/components/web/ContextMenu';
 import { isReactionsButtonEnabled, shouldDisplayReactionsButtons } from '../../../reactions/functions.web';
+import { isTranscribing } from '../../../transcribing/functions';
 import {
     setHangupMenuVisible,
     setOverflowMenuVisible,
     setToolbarHovered,
-    showToolbox
+    setToolboxVisible
 } from '../../actions.web';
 import {
     getJwtDisabledButtons,
@@ -43,15 +44,6 @@ interface IProps {
 
 const useStyles = makeStyles()(() => {
     return {
-        contextMenu: {
-            position: 'relative',
-            right: 'auto',
-            margin: 0,
-            marginBottom: '8px',
-            maxHeight: 'calc(100dvh - 100px)',
-            minWidth: '240px'
-        },
-
         hangupMenu: {
             position: 'relative',
             right: 'auto',
@@ -60,7 +52,7 @@ const useStyles = makeStyles()(() => {
             rowGap: '8px',
             margin: 0,
             padding: '16px',
-            marginBottom: '4px'
+            marginBottom: '8px'
         }
     };
 });
@@ -99,14 +91,19 @@ export default function Toolbox({
     const isDialogVisible = useSelector((state: IReduxState) => Boolean(state['features/base/dialog'].component));
     const jwt = useSelector((state: IReduxState) => state['features/base/jwt'].jwt);
     const localParticipant = useSelector(getLocalParticipant);
-    const jwtDisabledButtons = useSelector((state: IReduxState) =>
-        getJwtDisabledButtons(state, jwt, localParticipant?.features));
+    const transcribing = useSelector(isTranscribing);
+
+    // Do not convert to selector, it returns new array and will cause re-rendering of toolbox on every action.
+    const jwtDisabledButtons = getJwtDisabledButtons(transcribing, isModerator, jwt, localParticipant?.features);
+
     const reactionsButtonEnabled = useSelector(isReactionsButtonEnabled);
     const _shouldDisplayReactionsButtons = useSelector(shouldDisplayReactionsButtons);
     const toolbarVisible = useSelector(isToolboxVisible);
     const mainToolbarButtonsThresholds
         = useSelector((state: IReduxState) => state['features/toolbox'].mainToolbarButtonsThresholds);
     const allButtons = useToolboxButtons(customToolbarButtons);
+    const isMobile = isMobileBrowser();
+    const endConferenceSupported = Boolean(conference?.isEndConferenceSupported() && isModerator);
 
     useKeyboardShortcuts(toolbarButtonsToUse);
 
@@ -146,7 +143,12 @@ export default function Toolbox({
     }, [ dispatch ]);
 
     useEffect(() => {
-        if (hangupMenuVisible && !toolbarVisible) {
+
+        // On mobile web we want to keep both toolbox and hang up menu visible
+        // because they depend on each other.
+        if (endConferenceSupported && isMobile) {
+            hangupMenuVisible && dispatch(setToolboxVisible(true));
+        } else if (hangupMenuVisible && !toolbarVisible) {
             onSetHangupVisible(false);
             dispatch(setToolbarHovered(false));
         }
@@ -194,22 +196,27 @@ export default function Toolbox({
     }, [ dispatch ]);
 
     /**
-     * Toggle the toolbar visibility when tabbing into it.
+     * Handle focus on the toolbar.
      *
      * @returns {void}
      */
-    const onTabIn = useCallback(() => {
-        if (!toolbarVisible) {
-            dispatch(showToolbox());
-        }
-    }, [ toolbarVisible, dispatch ]);
+    const handleFocus = useCallback(() => {
+        dispatch(setToolboxVisible(true));
+    }, [ dispatch ]);
+
+    /**
+     * Handle blur the toolbar..
+     *
+     * @returns {void}
+     */
+    const handleBlur = useCallback(() => {
+        dispatch(setToolboxVisible(false));
+    }, [ dispatch ]);
 
     if (iAmRecorder || iAmSipGateway) {
         return null;
     }
 
-    const endConferenceSupported = Boolean(conference?.isEndConferenceSupported() && isModerator);
-    const isMobile = isMobileBrowser();
 
     const rootClassNames = `new-toolbox ${toolbarVisible ? 'visible' : ''} ${
         toolbarButtonsToUse.length ? '' : 'no-buttons'} ${chatOpen ? 'shift-right' : ''}`;
@@ -239,7 +246,8 @@ export default function Toolbox({
             <div className = { containerClassName }>
                 <div
                     className = 'toolbox-content-wrapper'
-                    onFocus = { onTabIn }
+                    onBlur = { handleBlur }
+                    onFocus = { handleFocus }
                     { ...(isMobile ? {} : {
                         onMouseOut,
                         onMouseOver

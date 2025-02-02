@@ -6,12 +6,14 @@ import { isJwtFeatureEnabled } from '../base/jwt/functions';
 import JitsiMeetJS from '../base/lib-jitsi-meet';
 import { isLocalParticipantModerator } from '../base/participants/functions';
 import MiddlewareRegistry from '../base/redux/MiddlewareRegistry';
+import { TRANSCRIBER_JOINED } from '../transcribing/actionTypes';
 
 import {
     SET_REQUESTING_SUBTITLES,
     TOGGLE_REQUESTING_SUBTITLES
 } from './actionTypes';
 import {
+    removeCachedTranscriptMessage,
     removeTranscriptMessage,
     setRequestingSubtitles,
     updateTranscriptMessage
@@ -80,6 +82,15 @@ MiddlewareRegistry.register(store => next => action => {
         _requestingSubtitlesChange(store, toggledValue, state._language);
         break;
     }
+    case TRANSCRIBER_JOINED: {
+        const { transcription } = store.getState()['features/base/config'];
+
+        if (transcription?.autoCaptionOnTranscribe) {
+            store.dispatch(setRequestingSubtitles(true));
+        }
+
+        break;
+    }
     case SET_REQUESTING_SUBTITLES:
         _requestingSubtitlesChange(store, action.enabled, action.language);
         break;
@@ -124,18 +135,16 @@ function _endpointMessageReceived(store: IStore, next: Function, action: AnyActi
         name
     };
 
+    let newTranscriptMessage: ITranscriptMessage | undefined;
+
     if (json.type === JSON_TYPE_TRANSLATION_RESULT && json.language === language) {
         // Displays final results in the target language if translation is
         // enabled.
-
-        const newTranscriptMessage = {
+        newTranscriptMessage = {
             clearTimeOut: undefined,
-            final: json.text,
+            final: json.text?.trim(),
             participant
         };
-
-        _setClearerOnTranscriptMessage(dispatch, transcriptMessageID, newTranscriptMessage);
-        dispatch(updateTranscriptMessage(transcriptMessageID, newTranscriptMessage));
     } else if (json.type === JSON_TYPE_TRANSCRIPTION_RESULT) {
         // Displays interim and final results without any translation if
         // translations are disabled.
@@ -187,7 +196,7 @@ function _endpointMessageReceived(store: IStore, next: Function, action: AnyActi
         // Regex to filter out all possible country codes after language code:
         // this should catch all notations like 'en-GB' 'en_GB' and 'enGB'
         // and be independent of the country code length
-        if (json.language.replace(/[-_A-Z].*/, '') !== language) {
+        if (_getPrimaryLanguageCode(json.language) !== _getPrimaryLanguageCode(language)) {
             return next(action);
         }
 
@@ -199,12 +208,11 @@ function _endpointMessageReceived(store: IStore, next: Function, action: AnyActi
         // message ID or adds a new transcript message if it does not
         // exist in the map.
         const existingMessage = state['features/subtitles']._transcriptMessages.get(transcriptMessageID);
-        const newTranscriptMessage: ITranscriptMessage = {
+
+        newTranscriptMessage = {
             clearTimeOut: existingMessage?.clearTimeOut,
             participant
         };
-
-        _setClearerOnTranscriptMessage(dispatch, transcriptMessageID, newTranscriptMessage);
 
         // If this is final result, update the state as a final result
         // and start a count down to remove the subtitle from the state
@@ -221,11 +229,46 @@ function _endpointMessageReceived(store: IStore, next: Function, action: AnyActi
             // after the stable part.
             newTranscriptMessage.unstable = text;
         }
+    }
 
+    if (newTranscriptMessage) {
+        if (newTranscriptMessage.final) {
+            const cachedTranscriptMessage
+                = state['features/subtitles']._cachedTranscriptMessages?.get(transcriptMessageID);
+
+            if (cachedTranscriptMessage) {
+                const cachedText = (cachedTranscriptMessage.stable || cachedTranscriptMessage.unstable)?.trim();
+                const newText = newTranscriptMessage.final;
+
+                if (cachedText && cachedText.length > 0 && newText && newText.length > 0
+                    && newText.toLowerCase().startsWith(cachedText.toLowerCase())) {
+                    newTranscriptMessage.final = newText.slice(cachedText.length)?.trim();
+                }
+                dispatch(removeCachedTranscriptMessage(transcriptMessageID));
+
+                if (!newTranscriptMessage.final || newTranscriptMessage.final.length === 0) {
+                    return next(action);
+                }
+            }
+        }
+
+
+        _setClearerOnTranscriptMessage(dispatch, transcriptMessageID, newTranscriptMessage);
         dispatch(updateTranscriptMessage(transcriptMessageID, newTranscriptMessage));
     }
 
     return next(action);
+}
+
+/**
+ * Utility function to extract the primary language code like 'en-GB' 'en_GB'
+ * 'enGB' 'zh-CN' and 'zh-TW'.
+ *
+ * @param {string} language - The language to use for translation or user requested.
+ * @returns {string}
+ */
+function _getPrimaryLanguageCode(language: string) {
+    return language.replace(/[-_A-Z].*/, '');
 }
 
 /**
@@ -251,7 +294,7 @@ function _requestingSubtitlesChange(
 
     if (enabled && conference?.getTranscriptionStatus() === JitsiMeetJS.constants.transcriptionStatus.OFF) {
         const isModerator = isLocalParticipantModerator(state);
-        const featureAllowed = isJwtFeatureEnabled(getState(), 'transcription', isModerator, isModerator);
+        const featureAllowed = isJwtFeatureEnabled(getState(), 'transcription', isModerator, false);
 
         if (featureAllowed) {
             conference?.dial(TRANSCRIBER_DIAL_NUMBER)
@@ -259,7 +302,7 @@ function _requestingSubtitlesChange(
                     logger.error('Error dialing', e);
 
                     // let's back to the correct state
-                    dispatch(setRequestingSubtitles(false, false));
+                    dispatch(setRequestingSubtitles(false, false, null));
                 });
         }
     }

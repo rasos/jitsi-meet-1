@@ -1,3 +1,4 @@
+local http_server = require "net.http.server";
 local jid = require "util.jid";
 local st = require 'util.stanza';
 local timer = require "util.timer";
@@ -30,6 +31,7 @@ local roomless_iqs = {};
 
 local OUTBOUND_SIP_JIBRI_PREFIXES = { 'outbound-sip-jibri@', 'sipjibriouta@', 'sipjibrioutb@' };
 local INBOUND_SIP_JIBRI_PREFIXES = { 'inbound-sip-jibri@', 'sipjibriina@', 'sipjibriina@' };
+local RECORDER_PREFIXES = module:get_option_inherited_set('recorder_prefixes', { 'recorder@recorder.', 'jibria@recorder.', 'jibrib@recorder.' });
 
 local split_subdomain_cache = cache.new(1000);
 local extract_subdomain_cache = cache.new(1000);
@@ -529,6 +531,10 @@ function is_sip_jibri_join(stanza)
     return false
 end
 
+function is_jibri(occupant)
+    return starts_with_one_of(occupant.jid, RECORDER_PREFIXES)
+end
+
 -- process a host module directly if loaded or hooks to wait for its load
 function process_host_module(name, callback)
     local function process_host(host)
@@ -578,11 +584,26 @@ function respond_iq_result(origin, stanza)
     }));
 end
 
+-- Note: http_server.get_request_from_conn() was added in Prosody 0.12.3,
+-- this code provides backwards compatibility with older versions
+local get_request_from_conn = http_server.get_request_from_conn or function (conn)
+    local response = conn and conn._http_open_response;
+    return response and response.request or nil;
+end;
+
+-- Discover real remote IP of a session
+function get_ip(session)
+    local request = get_request_from_conn(session.conn);
+    return request and request.ip or session.ip;
+end
+
 return {
     OUTBOUND_SIP_JIBRI_PREFIXES = OUTBOUND_SIP_JIBRI_PREFIXES;
     INBOUND_SIP_JIBRI_PREFIXES = INBOUND_SIP_JIBRI_PREFIXES;
+    RECORDER_PREFIXES = RECORDER_PREFIXES;
     extract_subdomain = extract_subdomain;
     is_feature_allowed = is_feature_allowed;
+    is_jibri = is_jibri;
     is_healthcheck_room = is_healthcheck_room;
     is_moderated = is_moderated;
     is_sip_jibri_join = is_sip_jibri_join;
@@ -590,6 +611,7 @@ return {
     is_transcriber_jigasi = is_transcriber_jigasi;
     is_vpaas = is_vpaas;
     get_focus_occupant = get_focus_occupant;
+    get_ip = get_ip;
     get_room_from_jid = get_room_from_jid;
     get_room_by_name_and_subdomain = get_room_by_name_and_subdomain;
     get_sip_jibri_email_prefix = get_sip_jibri_email_prefix;

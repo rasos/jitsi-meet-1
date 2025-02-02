@@ -16,8 +16,9 @@ import { IStore } from '../../app/types';
 import { removeLobbyChatParticipant } from '../../chat/actions.any';
 import { openDisplayNamePrompt } from '../../display-name/actions';
 import { isVpaasMeeting } from '../../jaas/functions';
-import { showErrorNotification } from '../../notifications/actions';
+import { showErrorNotification, showNotification } from '../../notifications/actions';
 import { NOTIFICATION_TIMEOUT_TYPE } from '../../notifications/constants';
+import { INotificationProps } from '../../notifications/types';
 import { hasDisplayName } from '../../prejoin/utils';
 import { stopLocalVideoRecording } from '../../recording/actions.any';
 import LocalRecordingManager from '../../recording/components/Recording/LocalRecordingManager';
@@ -37,6 +38,7 @@ import {
 import MiddlewareRegistry from '../redux/MiddlewareRegistry';
 import StateListenerRegistry from '../redux/StateListenerRegistry';
 import { TRACK_ADDED, TRACK_REMOVED } from '../tracks/actionTypes';
+import { parseURIString } from '../util/uri';
 
 import {
     CONFERENCE_FAILED,
@@ -419,6 +421,30 @@ function _connectionFailed({ dispatch, getState }: IStore, next: Function, actio
         }
     }
 
+    if (error.name === JitsiConnectionErrors.CONFERENCE_REQUEST_FAILED) {
+        let notificationAction: Function = showNotification;
+        const notificationProps = {
+            customActionNameKey: [ 'dialog.rejoinNow' ],
+            customActionHandler: [ () => dispatch(reloadNow()) ],
+            descriptionKey: 'notify.connectionFailed'
+        } as INotificationProps;
+
+        const { locationURL = { href: '' } as URL } = getState()['features/base/connection'];
+        const { tenant = '' } = parseURIString(locationURL.href) || {};
+
+        if (tenant.startsWith('-') || tenant.endsWith('-')) {
+            notificationProps.descriptionKey = 'notify.invalidTenantHyphenDescription';
+            notificationProps.titleKey = 'notify.invalidTenant';
+            notificationAction = showErrorNotification;
+        } else if (tenant.length > 63) {
+            notificationProps.descriptionKey = 'notify.invalidTenantLengthDescription';
+            notificationProps.titleKey = 'notify.invalidTenant';
+            notificationAction = showErrorNotification;
+        }
+
+        dispatch(notificationAction(notificationProps, NOTIFICATION_TIMEOUT_TYPE.STICKY));
+    }
+
     const result = next(action);
 
     _removeUnloadHandler(getState);
@@ -615,37 +641,6 @@ function _setRoom({ dispatch, getState }: IStore, next: Function, action: AnyAct
 }
 
 /**
- * Synchronizes local tracks from state with local tracks in JitsiConference
- * instance.
- *
- * @param {Store} store - The redux store.
- * @param {Object} action - Action object.
- * @private
- * @returns {Promise}
- */
-function _syncConferenceLocalTracksWithState({ getState }: IStore, action: AnyAction) {
-    const state = getState();
-    const conference = getCurrentConference(state);
-    let promise;
-
-    if (conference) {
-        const track = action.track.jitsiTrack;
-
-        if (action.type === TRACK_ADDED) {
-            // If gUM is slow and tracks are created after the user has already joined the conference, avoid
-            // adding the tracks to the conference if the user is a visitor.
-            if (!iAmVisitor(state)) {
-                promise = _addLocalTracksToConference(conference, [ track ]);
-            }
-        } else {
-            promise = _removeLocalTracksFromConference(conference, [ track ]);
-        }
-    }
-
-    return promise || Promise.resolve();
-}
-
-/**
  * Notifies the feature base/conference that the action {@code TRACK_ADDED}
  * or {@code TRACK_REMOVED} is being dispatched within a specific redux store.
  *
@@ -664,9 +659,28 @@ function _trackAddedOrRemoved(store: IStore, next: Function, action: AnyAction) 
 
     // TODO All track swapping should happen here instead of conference.js.
     if (track?.local) {
-        return (
-            _syncConferenceLocalTracksWithState(store, action)
-                .then(() => next(action)));
+        const { getState } = store;
+        const state = getState();
+        const conference = getCurrentConference(state);
+        let promise;
+
+        if (conference) {
+            const jitsiTrack = action.track.jitsiTrack;
+
+            if (action.type === TRACK_ADDED) {
+                // If gUM is slow and tracks are created after the user has already joined the conference, avoid
+                // adding the tracks to the conference if the user is a visitor.
+                if (!iAmVisitor(state)) {
+                    promise = _addLocalTracksToConference(conference, [ jitsiTrack ]);
+                }
+            } else {
+                promise = _removeLocalTracksFromConference(conference, [ jitsiTrack ]);
+            }
+
+            if (promise) {
+                return promise.then(() => next(action));
+            }
+        }
     }
 
     return next(action);

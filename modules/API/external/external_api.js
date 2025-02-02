@@ -59,6 +59,7 @@ const commands = {
     sendEndpointTextMessage: 'send-endpoint-text-message',
     sendParticipantToRoom: 'send-participant-to-room',
     sendTones: 'send-tones',
+    setAudioOnly: 'set-audio-only',
     setAssumedBandwidthBps: 'set-assumed-bandwidth-bps',
     setBlurredBackground: 'set-blurred-background',
     setFollowMe: 'set-follow-me',
@@ -69,6 +70,7 @@ const commands = {
     setSubtitles: 'set-subtitles',
     setTileView: 'set-tile-view',
     setVideoQuality: 'set-video-quality',
+    setVirtualBackground: 'set-virtual-background',
     showNotification: 'show-notification',
     startRecording: 'start-recording',
     startShareVideo: 'start-share-video',
@@ -103,6 +105,7 @@ const events = {
     'avatar-changed': 'avatarChanged',
     'audio-availability-changed': 'audioAvailabilityChanged',
     'audio-mute-status-changed': 'audioMuteStatusChanged',
+    'audio-only-changed': 'audioOnlyChanged',
     'audio-or-video-sharing-toggled': 'audioOrVideoSharingToggled',
     'breakout-rooms-updated': 'breakoutRoomsUpdated',
     'browser-support': 'browserSupport',
@@ -395,6 +398,7 @@ export default class JitsiMeetExternalAPI extends EventEmitter {
         this._participants = {};
         this._myUserID = undefined;
         this._onStageParticipant = undefined;
+        this._iAmvisitor = undefined;
         this._setupListeners();
         id++;
     }
@@ -616,6 +620,7 @@ export default class JitsiMeetExternalAPI extends EventEmitter {
                     email: data.email,
                     avatarURL: data.avatarURL
                 };
+                this._iAmvisitor = data.visitor;
             }
 
             // eslint-disable-next-line no-fallthrough
@@ -1166,6 +1171,15 @@ export default class JitsiMeetExternalAPI extends EventEmitter {
     }
 
     /**
+     * Returns whether we have joined as visitor in a meeting.
+     *
+     * @returns {boolean} - Returns true if we have joined as visitor.
+     */
+    isVisitor() {
+        return this._iAmvisitor;
+    }
+
+    /**
      * Returns the avatar URL of a participant.
      *
      * @param {string} participantId - The id of the participant.
@@ -1497,5 +1511,16 @@ export default class JitsiMeetExternalAPI extends EventEmitter {
                 exportedKey: false,
                 index }));
         }
+    }
+
+    /**
+     * Enable or disable the virtual background with a custom base64 image.
+     *
+     * @param {boolean} enabled - The boolean value to enable or disable.
+     * @param {string} backgroundImage - The base64 image.
+     * @returns {void}
+    */
+    setVirtualBackground(enabled, backgroundImage) {
+        this.executeCommand('setVirtualBackground', enabled, backgroundImage);
     }
 }

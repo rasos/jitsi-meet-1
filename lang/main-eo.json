@@ -222,7 +222,7 @@
         "noMobileApp": "Ĉu vi ne jam havas la aplikaĵon?",
         "termsAndConditions": "Daŭrigante, vi konsentas kun niaj <a href='{{termsAndConditionsLink}}' rel='noopener noreferrer' target='_blank'>kondiĉoj.</a>",
         "title": "Enirante vian kunvenon per {{app}}…",
-        "titleNew": "Enirante vian kunvenon...",
+        "titleNew": "Enirante vian kunvenon…",
         "tryAgainButton": "Provu denove per la komputila aplikaĵo",
         "unsupportedBrowser": "Ŝajnas ke vi uzas nesubtenitan retumilon"
     },
@@ -1373,16 +1373,7 @@
     },
     "unpinParticipant": "{{participantName}} - Malpingli",
     "userMedia": {
-        "androidGrantPermissions": "Elektu <b><i>Permesi</i></b> kiam via foliumilo petos permesojn.",
-        "chromeGrantPermissions": "Elektu <b><i>Permesi</i></b> kiam via foliumilo petos permesojn.",
-        "edgeGrantPermissions": "Elektu <b><i>Jes</i></b> kiam via foliumilo petos permesojn.",
-        "electronGrantPermissions": "Bonvolu doni la permeson uzi viajn kameraon kaj mikrofonon",
-        "firefoxGrantPermissions": "Elektu <b><i>Havigi elektitan aparaton</i></b> kiam via foliumilo petos permesojn.",
-        "iexplorerGrantPermissions": "Elektu <b><i>Bone</i></b> kiam via foliumilo petos permesojn.",
-        "nwjsGrantPermissions": "Bonvolu doni la permeson uzi viajn kameraon kaj mikrofonon",
-        "operaGrantPermissions": "Elektu <b><i>Permesi</i></b> kiam via foliumilo petos permesojn.",
-        "react-nativeGrantPermissions": "Elektu <b><i>Permesi</i></b> kiam via foliumilo petos permesojn.",
-        "safariGrantPermissions": "Elektu <b><i>Bone</i></b> kiam via foliumilo petos permesojn."
+        "grantPermissions": "Bonvolu doni la permeson uzi viajn kameraon kaj mikrofonon."
     },
     "videoSIPGW": {
         "busy": "Ni klopodas liberigi rimedojn. Bonvolu reprovi post kelkaj minutoj.",

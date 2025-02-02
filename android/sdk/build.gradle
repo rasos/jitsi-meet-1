@@ -8,6 +8,7 @@ android {
     defaultConfig {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+        buildConfigField "String", "SDK_VERSION", "\"$sdkVersion\""
     }
 
     buildTypes {
@@ -41,6 +42,7 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 
     api "com.facebook.react:react-android:$rootProject.ext.rnVersion"
+    api "com.facebook.react:hermes-android:$rootProject.ext.rnVersion"
 
     //noinspection GradleDynamicVersion
     implementation 'org.webkit:android-jsc:+'
@@ -56,7 +58,7 @@ dependencies {
     if (!rootProject.ext.libreBuild) {
         implementation project(':react-native-amplitude')
         implementation project(':react-native-giphy')
-        implementation(project(":react-native-google-signin")) {
+        implementation(project(':react-native-google-signin')) {
             exclude group: 'com.google.android.gms'
             exclude group: 'androidx'
         }
@@ -138,8 +140,7 @@ android.libraryVariants.all { def variant ->
         // Run the bundler
         commandLine(
                 "node",
-                "node_modules/react-native/local-cli/cli.js",
-                "bundle",
+                "node_modules/react-native/scripts/bundle.js",
                 "--platform", "android",
                 "--dev", "${devEnabled}",
                 "--reset-cache",

@@ -14,6 +14,7 @@ import {
     requestEnableVideoModeration
 } from '../../react/features/av-moderation/actions';
 import { isEnabledFromState } from '../../react/features/av-moderation/functions';
+import { setAudioOnly } from '../../react/features/base/audio-only/actions';
 import {
     endConference,
     sendTones,
@@ -114,14 +115,15 @@ import { toggleScreenshotCaptureSummary } from '../../react/features/screenshot-
 import { isScreenshotCaptureEnabled } from '../../react/features/screenshot-capture/functions';
 import SettingsDialog from '../../react/features/settings/components/web/SettingsDialog';
 import { SETTINGS_TABS } from '../../react/features/settings/constants';
-import { playSharedVideo, stopSharedVideo } from '../../react/features/shared-video/actions.any';
+import { playSharedVideo, stopSharedVideo } from '../../react/features/shared-video/actions';
 import { extractYoutubeIdOrURL } from '../../react/features/shared-video/functions';
 import { setRequestingSubtitles, toggleRequestingSubtitles } from '../../react/features/subtitles/actions';
 import { isAudioMuteButtonDisabled } from '../../react/features/toolbox/functions';
 import { setTileView, toggleTileView } from '../../react/features/video-layout/actions.any';
 import { muteAllParticipants } from '../../react/features/video-menu/actions';
 import { setVideoQuality } from '../../react/features/video-quality/actions';
-import { toggleBlurredBackgroundEffect } from '../../react/features/virtual-background/actions';
+import { toggleBackgroundEffect, toggleBlurredBackgroundEffect } from '../../react/features/virtual-background/actions';
+import { VIRTUAL_BACKGROUND_TYPE } from '../../react/features/virtual-background/constants';
 import { toggleWhiteboard } from '../../react/features/whiteboard/actions.web';
 import { getJitsiMeetTransport } from '../transport';
 
@@ -565,6 +567,10 @@ function initCommands() {
             sendAnalytics(createApiEvent('set.video.quality'));
             APP.store.dispatch(setVideoQuality(frameHeight));
         },
+        'set-audio-only': enable => {
+            sendAnalytics(createApiEvent('set.audio.only'));
+            APP.store.dispatch(setAudioOnly(enable));
+        },
         'start-share-video': url => {
             sendAnalytics(createApiEvent('share.video.start'));
             const id = extractYoutubeIdOrURL(url);
@@ -866,6 +872,16 @@ function initCommands() {
         },
         'toggle-whiteboard': () => {
             APP.store.dispatch(toggleWhiteboard());
+        },
+        'set-virtual-background': (enabled, backgroundImage) => {
+            const tracks = APP.store.getState()['features/base/tracks'];
+            const jitsiTrack = getLocalVideoTrack(tracks)?.jitsiTrack;
+
+            APP.store.dispatch(toggleBackgroundEffect({
+                backgroundEffectEnabled: enabled,
+                backgroundType: VIRTUAL_BACKGROUND_TYPE.IMAGE,
+                virtualSource: backgroundImage
+            }, jitsiTrack));
         }
     };
     transport.on('event', ({ data, name }) => {
@@ -1555,8 +1571,8 @@ class API {
                 formattedArgument += `${arg.toString()}: ${arg.stack}`;
             } else if (typeof arg === 'object') {
                 // NOTE: The non-enumerable properties of the objects wouldn't be included in the string after
-                // JSON.strigify. For example Map instance will be translated to '{}'. So I think we have to eventually
-                // do something better for parsing the arguments. But since this option for strigify is part of the
+                // JSON.stringify. For example Map instance will be translated to '{}'. So I think we have to eventually
+                // do something better for parsing the arguments. But since this option for stringify is part of the
                 // public interface and I think it could be useful in some cases I will it for now.
                 try {
                     formattedArgument += JSON.stringify(arg);
@@ -2215,6 +2231,19 @@ class API {
         this._sendEvent({
             name: 'compute-pressure-changed',
             records
+        });
+    }
+
+    /**
+     * Notify the external application (if API is enabled) when the audio only enabled status changed.
+     *
+     * @param {boolean} enabled - Whether the audio only is enabled or not.
+     * @returns {void}
+     */
+    notifyAudioOnlyChanged(enabled) {
+        this._sendEvent({
+            name: 'audio-only-changed',
+            enabled
         });
     }
 

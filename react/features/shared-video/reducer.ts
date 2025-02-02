@@ -4,7 +4,6 @@ import {
     RESET_SHARED_VIDEO_STATUS,
     SET_ALLOWED_URL_DOMAINS,
     SET_CONFIRM_SHOW_VIDEO,
-    SET_DISABLE_BUTTON,
     SET_SHARED_VIDEO_STATUS,
     SET_IS_PEERTUBE 
 } from './actionTypes';
@@ -17,7 +16,6 @@ const initialState = {
 export interface ISharedVideoState {
     allowedUrlDomains: Array<string>;
     confirmShowVideo?: boolean;
-    disabled?: boolean;
     muted?: boolean;
     ownerId?: string;
     status?: string;
@@ -32,7 +30,7 @@ export interface ISharedVideoState {
  */
 ReducerRegistry.register<ISharedVideoState>('features/shared-video',
 (state = initialState, action): ISharedVideoState => {
-    const { videoUrl, status, time, ownerId, disabled, muted, volume } = action;
+    const { videoUrl, status, time, ownerId, muted, volume } = action;
 
     switch (action.type) {
     case RESET_SHARED_VIDEO_STATUS:
@@ -55,12 +53,6 @@ ReducerRegistry.register<ISharedVideoState>('features/shared-video',
             time,
             videoUrl,
             volume
-        };
-
-    case SET_DISABLE_BUTTON:
-        return {
-            ...state,
-            disabled
         };
 
     case SET_ALLOWED_URL_DOMAINS: {
