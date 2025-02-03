@@ -20,7 +20,7 @@ import Whiteboard from '../../whiteboard/components/web/Whiteboard';
 import { isWhiteboardEnabled } from '../../whiteboard/functions';
 import { setSeeWhatIsBeingShared } from '../actions.web';
 import { getLargeVideoParticipant } from '../functions';
-import { setIsPeerTube } from '../../shared-video/actions.any';
+import { setIsPeerTube } from '../../shared-video/actions';
 
 import ScreenSharePlaceholder from './ScreenSharePlaceholder.web';
 
