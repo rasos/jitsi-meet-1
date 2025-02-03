@@ -147,7 +147,7 @@ class SharedVideo extends Component<IProps> {
      * @returns {React$Element}
      */
     render() {
-        const { isEnabled, isResizing } = this.props;
+        const { isEnabled, isResizing, isPeerTube  } = this.props;
 
         if (!isEnabled) {
             return null;
@@ -155,7 +155,7 @@ class SharedVideo extends Component<IProps> {
 
         return (
             <div
-                className = { (isResizing && 'disable-pointer') || '' }
+                className = { (!isPeerTube && isResizing) ? 'disable-pointer' : '' }
                 id = 'sharedVideo'
                 style = { this.getDimensions() }>
                 {this.getManager(isPeerTube ?? false)}
