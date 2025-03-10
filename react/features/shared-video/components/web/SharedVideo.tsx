@@ -4,9 +4,11 @@ import { connect } from 'react-redux';
 // @ts-ignore
 import Filmstrip from '../../../../../modules/UI/videolayout/Filmstrip';
 import { IReduxState } from '../../../app/types';
+import { FakeParticipant } from '../../../base/participants/types';
 import { getVerticalViewMaxWidth } from '../../../filmstrip/functions.web';
+import { getLargeVideoParticipant } from '../../../large-video/functions';
 import { getToolboxHeight } from '../../../toolbox/functions.web';
-import { isSharedVideoEnabled } from '../../functions';
+import { isSharedVideoEnabled, isVideoPlaying } from '../../functions';
 
 import PeerTubeVideoManager from './PeerTubeVideoManager';
 import VideoManager from './VideoManager';
@@ -41,9 +43,19 @@ interface IProps {
     isEnabled: boolean;
 
     /**
-     * Whether or not the user is actively resizing the filmstrip.
+     * Whether the user is actively resizing the filmstrip.
      */
     isResizing: boolean;
+
+    /**
+     * Whether the shared video is currently playing.
+     */
+    isVideoShared: boolean;
+
+    /**
+     * Whether the shared video should be shown on stage.
+     */
+    onStage: boolean;
 
     /**
      * The shared video url.
@@ -147,17 +159,23 @@ class SharedVideo extends Component<IProps> {
      * @returns {React$Element}
      */
     render() {
-        const { isEnabled, isResizing, isPeerTube  } = this.props;
+        const { isEnabled, isResizing, isVideoShared, onStage, isPeerTube  } = this.props;
 
-        if (!isEnabled) {
+        if (!isEnabled || !isVideoShared) {
             return null;
+        }
+
+        const style: any = this.getDimensions();
+
+        if (!onStage) {
+            style.display = 'none';
         }
 
         return (
             <div
                 className = { (!isPeerTube && isResizing) ? 'disable-pointer' : '' }
                 id = 'sharedVideo'
-                style = { this.getDimensions() }>
+                style = { style }>
                 {this.getManager(isPeerTube ?? false)}
             </div>
         );
@@ -176,6 +194,8 @@ function _mapStateToProps(state: IReduxState) {
     const { videoUrl, isPeerTube } = state['features/shared-video'];
     const { clientHeight, clientWidth } = state['features/base/responsive-ui'];
     const { visible, isResizing } = state['features/filmstrip'];
+    const onStage = getLargeVideoParticipant(state)?.fakeParticipant === FakeParticipant.SharedVideo;
+    const isVideoShared = isVideoPlaying(state);
 
     return {
         clientHeight,
@@ -184,6 +204,8 @@ function _mapStateToProps(state: IReduxState) {
         filmstripWidth: getVerticalViewMaxWidth(state),
         isEnabled: isSharedVideoEnabled(state),
         isResizing,
+        isVideoShared,
+        onStage,
         videoUrl,
         isPeerTube
     };

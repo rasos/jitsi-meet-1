@@ -1,4 +1,7 @@
+import { inIframe } from '../util/iframeUtils';
+
 import extraConfigWhitelist from './extraConfigWhitelist';
+import inIframeConfigWhitelist from './inIframeConfigWhitelist';
 
 /**
  * The config keys to whitelist, the keys that can be overridden.
@@ -22,6 +25,7 @@ export default [
     'apiLogLevels',
     'avgRtpStatsN',
     'backgroundAlpha',
+    'brandingRoomAlias',
     'breakoutRooms',
     'bridgeChannel',
     'buttonsWithNotifyClick',
@@ -76,9 +80,6 @@ export default [
     'channelLastN',
     'connectionIndicators',
     'constraints',
-    'brandingRoomAlias',
-    'debug',
-    'debugAudioLevels',
     'deeplinking.disabled',
     'deeplinking.desktop.enabled',
     'defaultLocalDisplayName',
@@ -92,13 +93,13 @@ export default [
     'disableAddingBackgroundImages',
     'disableAudioLevels',
     'disableBeforeUnloadHandlers',
+    'disableCameraTintForeground',
     'disableChatSmileys',
     'disableDeepLinking',
     'disabledNotifications',
     'disabledSounds',
     'disableFilmstripAutohiding',
     'disableInitialGUM',
-    'disableHPF',
     'disableInviteFunctions',
     'disableIncomingMessageSound',
     'disableJoinLeaveSounds',
@@ -147,13 +148,9 @@ export default [
     'enableNoAudioDetection',
     'enableNoisyMicDetection',
     'enableTcc',
-    'enableAutomaticUrlCopy',
     'faceLandmarks',
-    'failICE',
     'feedbackPercentage',
-    'fileRecordingsEnabled',
     'filmstrip',
-    'firefox_fake_device',
     'flags',
     'forceTurnRelay',
     'gatherStats',
@@ -192,6 +189,7 @@ export default [
     'p2p.enabled',
     'p2p.iceTransportPolicy',
     'p2p.mobileCodecPreferenceOrder',
+    'p2p.mobileScreenshareCodec',
     'participantMenuButtonsWithNotifyClick',
     'participantsPane',
     'pcStatsInterval',
@@ -232,10 +230,10 @@ export default [
     'useHostPageLocalStorage',
     'useTurnUdp',
     'videoQuality',
-    'visitors',
-    'watchRTCConfigParams.console',
+    'visitors.enableMediaOnPromote',
     'watchRTCConfigParams.allowBrowserLogCollection',
     'watchRTCConfigParams.collectionInterval',
+    'watchRTCConfigParams.console',
     'watchRTCConfigParams.debug',
     'watchRTCConfigParams.keys',
     'watchRTCConfigParams.logGetStats',
@@ -247,4 +245,4 @@ export default [
     'webrtcIceTcpDisable',
     'webrtcIceUdpDisable',
     'whiteboard.enabled'
-].concat(extraConfigWhitelist);
+].concat(extraConfigWhitelist).concat(inIframe() ? inIframeConfigWhitelist : []);
