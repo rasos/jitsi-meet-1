@@ -955,7 +955,6 @@
         "proceedAnyway": "Lanjutkan saja",
         "recordingWarning": "Peserta lain mungkin sedang merekam panggilan ini",
         "screenSharingError": "Kesalahan berbagi layar:",
-        "showScreen": "Aktifkan layar pra pertemuan",
         "startWithPhone": "Mulai dengan audio ponsel",
         "unsafeRoomConsent": "Saya memahami risikonya, saya ingin bergabung dengan pertemuan",
         "videoOnlyError": "Kesalahan video:",
@@ -1026,7 +1025,7 @@
         "localRecordingStartWarningTitle": "Hentikan rekaman untuk menyimpannya",
         "localRecordingVideoStop": "Menghentikan video Anda juga akan menghentikan rekaman lokal. Apakah Anda yakin ingin melanjutkan?",
         "localRecordingVideoWarning": "Untuk merekam video Anda, Anda harus mengaktifkannya saat memulai rekaman",
-        "localRecordingWarning": "Pastikan Anda memilih tab saat ini untuk menggunakan video dan audio yang tepat. Rekaman saat ini dibatasi hingga 1GB, sekitar 100 menit.",
+        "localRecordingWarning": "Pastikan Anda memilih tab saat ini untuk menggunakan video dan audio yang tepat.",
         "loggedIn": "Masuk sebagai {{userName}}",
         "noMicPermission": "Trek mikrofon tidak dapat dibuat. Harap izinkan penggunaan mikrofon.",
         "noStreams": "Tidak ada aliran audio atau video yang terdeteksi.",
@@ -1088,7 +1087,7 @@
         "incomingMessage": "Pesan masuk",
         "language": "Bahasa",
         "loggedIn": "Masuk sebagai {{name}}",
-        "maxStageParticipants": "Jumlah maksimum peserta yang dapat ditampilkan di panggung utama (PERCOBAAN)",
+        "maxStageParticipants": "Jumlah maksimum peserta yang dapat ditampilkan di panggung utama",
         "microphones": "Mikrofon",
         "moderator": "Moderator",
         "moderatorOptions": "Opsi moderator",
@@ -1388,16 +1387,7 @@
     },
     "unpinParticipant": "{{participantName}} - Lepas pin",
     "userMedia": {
-        "androidGrantPermissions": "Pilih <b><i>Izinkan</i></b> ketika browser Anda meminta izin.",
-        "chromeGrantPermissions": "Pilih <b><i>Izinkan</i></b> ketika browser Anda meminta izin.",
-        "edgeGrantPermissions": "Pilih <b><i>Ya</i></b> ketika browser Anda meminta izin.",
-        "electronGrantPermissions": "Mencoba mengakses kamera dan mikrofon Anda",
-        "firefoxGrantPermissions": "Pilih <b><i>Bagikan Perangkat yang Dipilih</i></b> ketika browser Anda meminta izin.",
-        "iexplorerGrantPermissions": "Pilih <b><i>OK</i></b> ketika browser Anda meminta izin.",
-        "nwjsGrantPermissions": "Harap berikan izin untuk menggunakan kamera dan mikrofon Anda",
-        "operaGrantPermissions": "Pilih <b><i>Izinkan</i></b> ketika browser Anda meminta izin.",
-        "react-nativeGrantPermissions": "Pilih <b><i>Izinkan</i></b> ketika browser Anda meminta izin.",
-        "safariGrantPermissions": "Pilih <b><i>OK</i></b> ketika browser Anda meminta izin."
+        "grantPermissions": "Harap berikan izin untuk menggunakan kamera dan mikrofon Anda."
     },
     "videoSIPGW": {
         "busy": "Kami sedang berupaya membebaskan sumber daya. Silakan coba lagi dalam beberapa menit.",

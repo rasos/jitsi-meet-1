@@ -1,16 +1,19 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 
-// @ts-expect-error
+// @ts-ignore
 import Filmstrip from '../../../../../modules/UI/videolayout/Filmstrip';
 import { IReduxState } from '../../../app/types';
-import { getLocalParticipant } from '../../../base/participants/functions';
+import { FakeParticipant } from '../../../base/participants/types';
 import { getVerticalViewMaxWidth } from '../../../filmstrip/functions.web';
+import { getLargeVideoParticipant } from '../../../large-video/functions';
 import { getToolboxHeight } from '../../../toolbox/functions.web';
-import { isSharedVideoEnabled } from '../../functions';
+import { isSharedVideoEnabled, isVideoPlaying } from '../../functions';
 
+import PeerTubeVideoManager from './PeerTubeVideoManager';
 import VideoManager from './VideoManager';
 import YoutubeVideoManager from './YoutubeVideoManager';
+import logger from '../../logger';
 
 interface IProps {
 
@@ -40,19 +43,29 @@ interface IProps {
     isEnabled: boolean;
 
     /**
-     * Is the video shared by the local user.
-     */
-    isOwner: boolean;
-
-    /**
-     * Whether or not the user is actively resizing the filmstrip.
+     * Whether the user is actively resizing the filmstrip.
      */
     isResizing: boolean;
+
+    /**
+     * Whether the shared video is currently playing.
+     */
+    isVideoShared: boolean;
+
+    /**
+     * Whether the shared video should be shown on stage.
+     */
+    onStage: boolean;
 
     /**
      * The shared video url.
      */
     videoUrl?: string;
+
+    /**
+     * Whether the video is from PeerTube.
+     */
+    isPeerTube?: boolean;
 }
 
 /** .
@@ -103,11 +116,33 @@ class SharedVideo extends Component<IProps> {
      *
      * @returns {Component}
      */
-    getManager() {
+    getManager(isPeertube: boolean) {
         const { videoUrl } = this.props;
 
         if (!videoUrl) {
             return null;
+        }
+
+        if (isPeertube) {
+            const urlParts = videoUrl.split('/w/');
+            const domain = urlParts[0];
+            let videoId = urlParts[1];
+
+            // Check if the URL contains '/p/'
+            if (videoUrl.includes('/p/')) {
+                // Handle playlist URL
+                videoId = urlParts[1];
+                const embedUrl = `${domain}/video-playlists/embed/${videoId}`;
+
+                logger.info('Embed URL:', embedUrl);
+
+                return <PeerTubeVideoManager videoId = { embedUrl } />;
+            }
+
+            // Handle regular video URL
+            const embedUrl = `${domain}/videos/embed/${videoId}`;
+
+            return <PeerTubeVideoManager videoId = { embedUrl } />;
         }
 
         if (videoUrl.match(/http/)) {
@@ -123,21 +158,25 @@ class SharedVideo extends Component<IProps> {
      * @inheritdoc
      * @returns {React$Element}
      */
-    render() {
-        const { isEnabled, isOwner, isResizing } = this.props;
+    override render() {
+        const { isEnabled, isResizing, isVideoShared, onStage, isPeerTube  } = this.props;
 
-        if (!isEnabled) {
+        if (!isEnabled || !isVideoShared) {
             return null;
         }
 
-        const className = !isResizing && isOwner ? '' : 'disable-pointer';
+        const style: any = this.getDimensions();
+
+        if (!onStage) {
+            style.display = 'none';
+        }
 
         return (
             <div
-                className = { className }
+                className = { (!isPeerTube && isResizing) ? 'disable-pointer' : '' }
                 id = 'sharedVideo'
-                style = { this.getDimensions() }>
-                {this.getManager()}
+                style = { style }>
+                {this.getManager(isPeerTube ?? false)}
             </div>
         );
     }
@@ -152,21 +191,24 @@ class SharedVideo extends Component<IProps> {
  * @returns {IProps}
  */
 function _mapStateToProps(state: IReduxState) {
-    const { ownerId, videoUrl } = state['features/shared-video'];
-    const { clientHeight, clientWidth } = state['features/base/responsive-ui'];
+    const { videoUrl, isPeerTube } = state['features/shared-video'];
+    const { clientHeight, videoSpaceWidth } = state['features/base/responsive-ui'];
     const { visible, isResizing } = state['features/filmstrip'];
-
-    const localParticipant = getLocalParticipant(state);
+    const { isResizing: isChatResizing } = state['features/chat'];
+    const onStage = getLargeVideoParticipant(state)?.fakeParticipant === FakeParticipant.SharedVideo;
+    const isVideoShared = isVideoPlaying(state);
 
     return {
         clientHeight,
-        clientWidth,
+        clientWidth: videoSpaceWidth,
         filmstripVisible: visible,
         filmstripWidth: getVerticalViewMaxWidth(state),
         isEnabled: isSharedVideoEnabled(state),
-        isOwner: ownerId === localParticipant?.id,
-        isResizing,
-        videoUrl
+        isResizing: isResizing || isChatResizing,
+        isVideoShared,
+        onStage,
+        videoUrl,
+        isPeerTube
     };
 }
 

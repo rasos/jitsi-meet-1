@@ -1,11 +1,11 @@
 import { Theme } from '@mui/material';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { connect } from 'react-redux';
 import { makeStyles } from 'tss-react/mui';
 
 import { IReduxState } from '../../../app/types';
 import { translate } from '../../../base/i18n/functions';
-import { getParticipantDisplayName } from '../../../base/participants/functions';
+import { getParticipantById, getParticipantDisplayName, isPrivateChatEnabled } from '../../../base/participants/functions';
 import Popover from '../../../base/popover/components/Popover.web';
 import Message from '../../../base/react/components/web/Message';
 import { withPixelLineHeight } from '../../../base/styles/functions.web';
@@ -254,7 +254,9 @@ const ChatMessage = ({
     function _renderTimestamp() {
         return (
             <div className = { cx('timestamp', classes.timestamp) }>
-                {getFormattedTimestamp(message)}
+                <p>
+                    {getFormattedTimestamp(message)}
+                </p>
             </div>
         );
     }
@@ -264,7 +266,7 @@ const ChatMessage = ({
      *
      * @returns {React$Element<*>}
      */
-    const renderReactions = () => {
+    const renderReactions = useMemo(() => {
         if (!message.reactions || message.reactions.size === 0) {
             return null;
         }
@@ -285,15 +287,17 @@ const ChatMessage = ({
                     <div
                         className = { classes.reactionItem }
                         key = { reaction }>
-                        <span>{reaction}</span>
-                        <span>{participants.size}</span>
+                        <p>
+                            <span>{reaction}</span>
+                            <span>{participants.size}</span>
+                        </p>
                         <div className = { classes.participantList }>
                             {Array.from(participants).map(participantId => (
-                                <div
+                                <p
                                     className = { classes.participant }
                                     key = { participantId }>
                                     {state && getParticipantDisplayName(state, participantId)}
-                                </div>
+                                </p>
                             ))}
                         </div>
                     </div>
@@ -311,17 +315,17 @@ const ChatMessage = ({
                 visible = { isReactionsOpen }>
                 <div className = { classes.reactionBox }>
                     {reactionsArray.slice(0, numReactionsDisplayed).map(({ reaction }, index) =>
-                        <span key = { index }>{reaction}</span>
+                        <p key = { index }>{reaction}</p>
                     )}
                     {reactionsArray.length > numReactionsDisplayed && (
-                        <span className = { classes.reactionCount }>
+                        <p className = { classes.reactionCount }>
                             +{totalReactions - numReactionsDisplayed}
-                        </span>
+                        </p>
                     )}
                 </div>
             </Popover>
         );
-    };
+    }, [ message?.reactions, isHovered, isReactionsOpen ]);
 
     return (
         <div
@@ -352,21 +356,20 @@ const ChatMessage = ({
                         <div className = { cx('messagecontent', classes.messageContent) }>
                             {showDisplayName && _renderDisplayName()}
                             <div className = { cx('usermessage', classes.userMessage) }>
-                                <span className = 'sr-only'>
-                                    {message.displayName === message.recipient
-                                        ? t('chat.messageAccessibleTitleMe')
-                                        : t('chat.messageAccessibleTitle', {
+                                <Message
+                                    screenReaderHelpText = { message.displayName === message.recipient
+                                        ? t<string>('chat.messageAccessibleTitleMe')
+                                        : t<string>('chat.messageAccessibleTitle', {
                                             user: message.displayName
-                                        })}
-                                </span>
-                                <Message text = { getMessageText(message) } />
+                                        }) }
+                                    text = { getMessageText(message) } />
                                 {(message.privateMessage || (message.lobbyChat && !knocking))
                                     && _renderPrivateNotice()}
                                 <div className = { classes.chatMessageFooter }>
                                     <div className = { classes.chatMessageFooterLeft }>
                                         {message.reactions && message.reactions.size > 0 && (
                                             <>
-                                                {renderReactions()}
+                                                {renderReactions}
                                             </>
                                         )}
                                     </div>
@@ -378,7 +381,7 @@ const ChatMessage = ({
                 </div>
                 {shouldDisplayChatMessageMenu && (
                     <div className = { classes.sideBySideContainer }>
-                        {!message.privateMessage && <div>
+                        {!message.privateMessage && !message.lobbyChat && <div>
                             <div className = { classes.optionsButtonContainer }>
                                 {isHovered && <ReactButton
                                     messageId = { message.messageId }
@@ -409,10 +412,12 @@ const ChatMessage = ({
  */
 function _mapStateToProps(state: IReduxState, { message }: IProps) {
     const { knocking } = state['features/lobby'];
-    const localParticipantId = state['features/base/participants'].local?.id;
+
+    const participant = getParticipantById(state, message.participantId);
+    const enablePrivateChat = isPrivateChatEnabled(participant, state);
 
     return {
-        shouldDisplayChatMessageMenu: message.participantId !== localParticipantId,
+        shouldDisplayChatMessageMenu: enablePrivateChat,
         knocking,
         state
     };

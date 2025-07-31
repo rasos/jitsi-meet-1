@@ -14,9 +14,12 @@ local jid = require 'util.jid';
 local st = require 'util.stanza';
 local new_id = require 'util.id'.medium;
 local filters = require 'util.filters';
-local array = require"util.array";
+local array = require 'util.array';
+local set = require 'util.set';
+local json = require 'cjson.safe';
 
 local util = module:require 'util';
+local is_admin = util.is_admin;
 local ends_with = util.ends_with;
 local is_vpaas = util.is_vpaas;
 local room_jid_match_rewrite = util.room_jid_match_rewrite;
@@ -25,6 +28,7 @@ local get_focus_occupant = util.get_focus_occupant;
 local internal_room_jid_match_rewrite = util.internal_room_jid_match_rewrite;
 local presence_check_status = util.presence_check_status;
 local respond_iq_result = util.respond_iq_result;
+local table_compare = util.table_compare;
 
 local PARTICIPANT_PROP_RAISE_HAND = 'jitsi_participant_raisedHand';
 local PARTICIPANT_PROP_REQUEST_TRANSCRIPTION = 'jitsi_participant_requestingTranscription';
@@ -62,20 +66,13 @@ local sent_iq_cache = require 'util.cache'.new(200);
 
 local sessions = prosody.full_sessions;
 
-local um_is_admin = require 'core.usermanager'.is_admin;
-local function is_admin(jid)
-    return um_is_admin(jid, module.host);
-end
-
 local function send_transcriptions_update(room)
     -- let's notify main prosody
-    local lang_array = array{};
+    local lang_array = array();
     local count = 0;
 
     for k, v in pairs(room._transcription_languages) do
-        if not lang_array[v] then
-            lang_array:push(v);
-        end
+        lang_array:push(v);
         count = count + 1;
     end
 
@@ -90,7 +87,7 @@ local function send_transcriptions_update(room)
                          room = jid.join(jid.node(room.jid), muc_domain_prefix..'.'..main_domain) })
       :tag('transcription-languages', {
         xmlns = 'jitsi:visitors',
-        langs = lang_array:sort():concat(','),
+        langs = lang_array:unique():sort():concat(','),
         count = tostring(count)
       }):up());
 end
@@ -127,8 +124,14 @@ end
 module:hook('muc-occupant-pre-join', function (event)
     local occupant, room, origin, stanza = event.occupant, event.room, event.origin, event.stanza;
     local node, host = jid.split(occupant.bare_jid);
+    local resource = jid.resource(occupant.nick);
 
-    if prosody.hosts[host] and not is_admin(occupant.bare_jid) then
+    if is_admin(occupant.bare_jid) then
+        return;
+    end
+
+    if prosody.hosts[host] then
+        -- local participants which host is defined in this prosody
         if room._main_room_lobby_enabled then
             origin.send(st.error_reply(stanza, 'cancel', 'not-allowed', 'Visitors not allowed while lobby is on!')
                 :tag('no-visitors-lobby', { xmlns = 'jitsi:visitors' }));
@@ -136,6 +139,9 @@ module:hook('muc-occupant-pre-join', function (event)
         else
             occupant.role = 'visitor';
         end
+    elseif room.moderators_list and room.moderators_list:contains(resource) then
+        -- remote participants, host is the main prosody
+        occupant.role = 'moderator';
     end
 end, 3);
 
@@ -203,6 +209,20 @@ local function cancel_destroy_timer(room)
     end
 end
 
+local function destroy_with_conference_ended(room)
+    -- if the room is being destroyed, ignore
+    if room.destroying then
+        return;
+    end
+
+    cancel_destroy_timer(room);
+
+    local main_count, visitors_count = get_occupant_counts(room);
+    module:log('info', 'Will destroy:%s main_occupants:%s visitors:%s', room.jid, main_count, visitors_count);
+    room:destroy(nil, 'Conference ended.');
+    return true;
+end
+
 -- schedules a new destroy timer which will destroy the room if there are no visitors after the timeout
 local function schedule_destroy_timer(room)
     cancel_destroy_timer(room);
@@ -263,6 +283,10 @@ module:hook('muc-occupant-left', function (event)
     if visitors_count == 0 then
         schedule_destroy_timer(room);
     end
+
+    if main_count == 0 then
+        destroy_with_conference_ended(room);
+    end
 end);
 
 -- forward visitor presences to jicofo
@@ -301,6 +325,7 @@ module:hook('muc-broadcast-presence', function (event)
     -- a promotion detected let's send it to main prosody
     if raiseHand then
         local user_id;
+        local group_id;
         local is_moderator;
         local session = sessions[occupant.jid];
         local identity = session and session.jitsi_meet_context_user;
@@ -316,14 +341,14 @@ module:hook('muc-broadcast-presence', function (event)
             -- so we can be auto promoted
             if identity and identity.id then
                 user_id = session.jitsi_meet_context_user.id;
+                group_id = session.jitsi_meet_context_group;
 
-                if room._data.moderator_id then
-                    if room._data.moderator_id == user_id then
+                if session.auth_token and auto_promoted_with_token then
+                    if not session.jitsi_meet_tenant_mismatch or session.jitsi_web_query_prefix == '' then
+                        -- non-vpaas and having a token is considered a moderator, and if it is not in '/' tenant
+                        -- the tenant from url and token should match
                         is_moderator = true;
                     end
-                elseif session.auth_token and auto_promoted_with_token then
-                    -- non-vpaas and having a token is considered a moderator
-                    is_moderator = true;
                 end
             end
         end
@@ -342,6 +367,7 @@ module:hook('muc-broadcast-presence', function (event)
             jid = occupant.jid,
             time = raiseHand,
             userId = user_id,
+            groupId = group_id,
             forcePromote = is_moderator and 'true' or 'false';
           }):up();
 
@@ -353,15 +379,15 @@ module:hook('muc-broadcast-presence', function (event)
         module:send(promotion_request);
     end
 
+    local requestTranscriptionValue = full_p:get_child_text(PARTICIPANT_PROP_REQUEST_TRANSCRIPTION);
+    local hasTranscriptionEnabled = room._transcription_languages and room._transcription_languages[occupant.jid];
+
     -- detect transcription
-    if full_p:get_child_text(PARTICIPANT_PROP_REQUEST_TRANSCRIPTION) then
+    if requestTranscriptionValue == 'true' then
         local lang = full_p:get_child_text(PARTICIPANT_PROP_TRANSLATION_LANG);
 
-        occupant._transcription_enabled = true;
-
         add_transcription(room, occupant, lang);
-    elseif occupant._transcription_enabled then
-        occupant._transcription_enabled = false;
+    elseif hasTranscriptionEnabled then
         remove_transcription(room, occupant, nil);
     end
 
@@ -399,7 +425,6 @@ local function stanza_handler(event)
     local room = get_room_from_jid(room_jid_match_rewrite(room_jid));
 
     if not room then
-        module:log('warn', 'No room found %s', room_jid);
         return;
     end
 
@@ -546,7 +571,15 @@ module:hook('jicofo-unlock-room', function(e)
     return true;
 end);
 
--- handles incoming iq connect stanzas
+-- handles incoming iq visitors stanzas
+-- connect - sent after sending all main participant's presences
+-- disconnect - sent when main room is destroyed or when we receive a 'disconnect-vnode' iq from jicofo
+-- update - sent on:
+--      * room secret is changed
+--      * lobby enabled or disabled
+--      * initially before connect to report currently joined moderators
+--      * moderator participant joins main room
+--      * a participant has been granted moderator rights
 local function iq_from_main_handler(event)
     local origin, stanza = event.origin, event.stanza;
 
@@ -577,7 +610,7 @@ local function iq_from_main_handler(event)
     local room = get_room_from_jid(room_jid_match_rewrite(room_jid));
 
     if not room then
-        module:log('warn', 'No room found %s', room_jid);
+        module:log('warn', 'No room found %s in iq_from_main_handler for:%s', room_jid, visitors_iq);
         return;
     end
 
@@ -603,19 +636,13 @@ local function iq_from_main_handler(event)
     respond_iq_result(origin, stanza);
 
     if process_disconnect then
-        cancel_destroy_timer(room);
-
-        local main_count, visitors_count = get_occupant_counts(room);
-        module:log('info', 'Will destroy:%s main_occupants:%s visitors:%s', room.jid, main_count, visitors_count);
-        room:destroy(nil, 'Conference ended.');
-        return true;
+        return destroy_with_conference_ended(room);
     end
 
     -- if there is password supplied use it
     -- if this is update it will either set or remove the password
     room:set_password(node.attr.password);
     room._data.meetingId = node.attr.meetingId;
-    room._data.moderator_id = node.attr.moderatorId;
     local createdTimestamp = node.attr.createdTimestamp;
     room.created_timestamp = createdTimestamp and tonumber(createdTimestamp) or nil;
 
@@ -623,6 +650,51 @@ local function iq_from_main_handler(event)
         room._main_room_lobby_enabled = true;
     elseif node.attr.lobby == 'false' then
         room._main_room_lobby_enabled = false;
+    end
+
+    -- read the moderators list
+    room.moderators_list = room.moderators_list or set.new();
+    local moderators = node:get_child('moderators');
+
+    if moderators then
+        for _, child in ipairs(moderators.tags) do
+            if child.name == 'item' then
+                room.moderators_list:add(child.attr.epId);
+            end
+        end
+
+        -- let's check current occupants roles and promote them if needed
+        -- we change only main participants which are not moderators, but participant
+        for _, o in room:each_occupant() do
+            if not is_admin(o.bare_jid)
+                and o.role == 'participant'
+                and room.moderators_list:contains(jid.resource(o.nick)) then
+                room:set_affiliation(true, o.bare_jid, 'owner');
+            end
+        end
+    end
+
+    local files = node:get_child('files');
+    if files then
+        local received_files = {};
+        for _, child in ipairs(files.tags) do
+            if child.name == 'file' then
+                received_files[child.attr.id] = json.decode(child:get_text());
+            end
+        end
+
+        -- fire events so file sharing component will add/remove files and will notify clients
+        local removed, added = table_compare(room.jitsi_shared_files or {}, received_files)
+        for _, id in ipairs(removed) do
+            module:context(local_domain):fire_event('jitsi-filesharing-remove', {
+                room = room; id = id;
+            });
+        end
+        for _, id in ipairs(added) do
+            module:context(local_domain):fire_event('jitsi-filesharing-add', {
+                room = room; file = received_files[id];
+            });
+        end
     end
 
     if fire_jicofo_unlock then

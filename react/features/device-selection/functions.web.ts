@@ -126,6 +126,7 @@ export function getVideoDeviceSelectionDialogProps(stateful: IStateful, isDispla
     return {
         currentFramerate: framerate,
         desktopShareFramerates: SS_SUPPORTED_FRAMERATES,
+        disableDesktopShareSettings: isMobileBrowser(),
         disableDeviceChange: !JitsiMeetJS.mediaDevices.isDeviceChangeAvailable(),
         disableVideoInputSelect,
         disableLocalVideoFlip,
@@ -162,7 +163,8 @@ export function processExternalDeviceRequest( // eslint-disable-line max-params
 
     switch (request.name) {
     case 'isDeviceListAvailable':
-        responseCallback(JitsiMeetJS.mediaDevices.isDeviceListAvailable());
+        // TODO(saghul): remove this, eventually.
+        responseCallback(true);
         break;
     case 'isDeviceChangeAvailable':
         responseCallback(

@@ -4,27 +4,29 @@ import { connect } from 'react-redux';
 // @ts-expect-error
 import VideoLayout from '../../../../modules/UI/videolayout/VideoLayout';
 import { IReduxState, IStore } from '../../app/types';
+import { isDisplayNameVisible } from '../../base/config/functions.web';
 import { VIDEO_TYPE } from '../../base/media/constants';
 import { getLocalParticipant } from '../../base/participants/functions';
 import Watermarks from '../../base/react/components/web/Watermarks';
 import { getHideSelfView } from '../../base/settings/functions.any';
 import { getVideoTrackByParticipant } from '../../base/tracks/functions.web';
 import { setColorAlpha } from '../../base/util/helpers';
+import { isSpotTV } from '../../base/util/spot';
 import StageParticipantNameLabel from '../../display-name/components/web/StageParticipantNameLabel';
 import { FILMSTRIP_BREAKPOINT } from '../../filmstrip/constants';
 import { getVerticalViewMaxWidth, isFilmstripResizable } from '../../filmstrip/functions.web';
 import SharedVideo from '../../shared-video/components/web/SharedVideo';
 import Captions from '../../subtitles/components/web/Captions';
+import { areClosedCaptionsEnabled } from '../../subtitles/functions.any';
 import { setTileView } from '../../video-layout/actions.web';
 import Whiteboard from '../../whiteboard/components/web/Whiteboard';
 import { isWhiteboardEnabled } from '../../whiteboard/functions';
 import { setSeeWhatIsBeingShared } from '../actions.web';
 import { getLargeVideoParticipant } from '../functions';
+import { setIsPeerTube } from '../../shared-video/actions';
 
 import ScreenSharePlaceholder from './ScreenSharePlaceholder.web';
 
-// Hack to detect Spot.
-const SPOT_DISPLAY_NAME = 'Meeting Room';
 
 interface IProps {
 
@@ -57,6 +59,11 @@ interface IProps {
      * Prop that indicates whether the chat is open.
      */
     _isChatOpen: boolean;
+
+    /**
+     * Whether or not the display name is visible.
+     */
+    _isDisplayNameVisible: boolean;
 
     /**
      * Whether or not the local screen share is on large-video.
@@ -95,6 +102,11 @@ interface IProps {
     _showDominantSpeakerBadge: boolean;
 
     /**
+     * Whether or not to show subtitles button.
+     */
+    _showSubtitles?: boolean;
+
+    /**
      * The width of the vertical filmstrip (user resized).
      */
     _verticalFilmstripWidth?: number | null;
@@ -113,6 +125,11 @@ interface IProps {
      * Whether or not the whiteboard is ready to be used.
      */
     _whiteboardEnabled: boolean;
+
+    /**
+     * The shared video url.
+     */
+    _videoUrl?: string;
 
     /**
      * The Redux dispatch function.
@@ -154,7 +171,7 @@ class LargeVideo extends Component<IProps> {
      *
      * @inheritdoc
      */
-    componentDidUpdate(prevProps: IProps) {
+    override componentDidUpdate(prevProps: IProps) {
         const {
             _visibleFilmstrip,
             _isScreenSharing,
@@ -179,6 +196,10 @@ class LargeVideo extends Component<IProps> {
             && prevProps._hideSelfView !== _hideSelfView) {
             VideoLayout.updateLargeVideo(_largeVideoParticipantId, true, false);
         }
+
+        if (prevProps._videoUrl !== this.props._videoUrl) {
+            handleVideoUrlChange(this.props);
+        }
     }
 
     /**
@@ -187,16 +208,18 @@ class LargeVideo extends Component<IProps> {
      * @inheritdoc
      * @returns {React$Element}
      */
-    render() {
+    override render() {
         const {
             _displayScreenSharingPlaceholder,
             _isChatOpen,
+            _isDisplayNameVisible,
             _noAutoPlayVideo,
             _showDominantSpeakerBadge,
-            _whiteboardEnabled
+            _whiteboardEnabled,
+            _showSubtitles
         } = this.props;
         const style = this._getCustomStyles();
-        const className = `videocontainer${_isChatOpen ? ' shift-right' : ''}`;
+        const className = 'videocontainer';
 
         return (
             <div
@@ -241,9 +264,14 @@ class LargeVideo extends Component<IProps> {
                             playsInline = { true } /* for Safari on iOS to work */ />
                     </div>
                 </div>
-                { interfaceConfig.DISABLE_TRANSCRIPTION_SUBTITLES
-                    || <Captions /> }
-                {_showDominantSpeakerBadge && <StageParticipantNameLabel />}
+                { (!interfaceConfig.DISABLE_TRANSCRIPTION_SUBTITLES && _showSubtitles)
+                    && <Captions /> }
+                {
+                    _isDisplayNameVisible
+                    && (
+                        _showDominantSpeakerBadge && <StageParticipantNameLabel />
+                    )
+                }
             </div>
         );
     }
@@ -352,22 +380,24 @@ function _mapStateToProps(state: IReduxState) {
     const { backgroundColor, backgroundImageUrl } = state['features/dynamic-branding'];
     const { isOpen: isChatOpen } = state['features/chat'];
     const { width: verticalFilmstripWidth, visible } = state['features/filmstrip'];
-    const { defaultLocalDisplayName, hideDominantSpeakerBadge } = state['features/base/config'];
+    const { hideDominantSpeakerBadge } = state['features/base/config'];
     const { seeWhatIsBeingShared } = state['features/large-video'];
+    const { videoUrl } = state['features/shared-video'];
     const localParticipantId = getLocalParticipant(state)?.id;
     const largeVideoParticipant = getLargeVideoParticipant(state);
     const videoTrack = getVideoTrackByParticipant(state, largeVideoParticipant);
     const isLocalScreenshareOnLargeVideo = largeVideoParticipant?.id?.includes(localParticipantId ?? '')
         && videoTrack?.videoType === VIDEO_TYPE.DESKTOP;
-    const isOnSpot = defaultLocalDisplayName === SPOT_DISPLAY_NAME;
 
     return {
         _backgroundAlpha: state['features/base/config'].backgroundAlpha,
         _customBackgroundColor: backgroundColor,
         _customBackgroundImageUrl: backgroundImageUrl,
-        _displayScreenSharingPlaceholder: Boolean(isLocalScreenshareOnLargeVideo && !seeWhatIsBeingShared && !isOnSpot),
+        _displayScreenSharingPlaceholder:
+            Boolean(isLocalScreenshareOnLargeVideo && !seeWhatIsBeingShared && !isSpotTV(state)),
         _hideSelfView: getHideSelfView(state),
         _isChatOpen: isChatOpen,
+        _isDisplayNameVisible: isDisplayNameVisible(state),
         _isScreenSharing: Boolean(isLocalScreenshareOnLargeVideo),
         _largeVideoParticipantId: largeVideoParticipant?.id ?? '',
         _localParticipantId: localParticipantId ?? '',
@@ -375,11 +405,47 @@ function _mapStateToProps(state: IReduxState) {
         _resizableFilmstrip: isFilmstripResizable(state),
         _seeWhatIsBeingShared: Boolean(seeWhatIsBeingShared),
         _showDominantSpeakerBadge: !hideDominantSpeakerBadge,
+        _showSubtitles: areClosedCaptionsEnabled(state)
+            && Boolean(state['features/base/settings'].showSubtitlesOnStage),
         _verticalFilmstripWidth: verticalFilmstripWidth.current,
         _verticalViewMaxWidth: getVerticalViewMaxWidth(state),
         _visibleFilmstrip: visible,
-        _whiteboardEnabled: isWhiteboardEnabled(state)
+        _whiteboardEnabled: isWhiteboardEnabled(state),
+        _videoUrl: videoUrl
     };
+}
+
+/**
+ * Checks if a URL is from PeerTube by fetching nodeinfo.
+ *
+ * @param {string} url - The URL to check.
+ * @returns {Promise<boolean>}
+ */
+async function checkIsPeerTube(url: string) {
+    try {
+        const baseUrl = new URL(url).origin;
+        const response = await fetch(`${baseUrl}/nodeinfo/2.0.json`);
+        const data = await response.json();
+        
+        return data?.software?.name?.toLowerCase() === 'peertube';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Side effect to check PeerTube status when video URL changes.
+ *
+ * @param {Object} props - The component props.
+ * @param {Function} dispatch - The Redux dispatch function.
+ */
+async function handleVideoUrlChange(props: IProps) {
+    const { _videoUrl } = props;
+    
+    if (_videoUrl) {
+        const isPeerTube = await checkIsPeerTube(_videoUrl);
+        props.dispatch(setIsPeerTube(isPeerTube));
+    }
 }
 
 export default connect(_mapStateToProps)(LargeVideo);

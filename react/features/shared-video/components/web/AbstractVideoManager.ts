@@ -15,7 +15,7 @@ import { showWarningNotification } from '../../../notifications/actions';
 import { NOTIFICATION_TIMEOUT_TYPE } from '../../../notifications/constants';
 import { dockToolbox } from '../../../toolbox/actions';
 import { muteLocal } from '../../../video-menu/actions.any';
-import { setSharedVideoStatus, stopSharedVideo } from '../../actions.any';
+import { setSharedVideoStatus, stopSharedVideo } from '../../actions';
 import { PLAYBACK_STATUSES } from '../../constants';
 
 const logger = Logger.getLogger(__filename);
@@ -105,6 +105,7 @@ export interface IProps {
      */
     _videoUrl?: string;
 
+
     /**
       * The video id.
       */
@@ -137,7 +138,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @inheritdoc
      */
-    componentDidMount() {
+    override componentDidMount() {
         this.props._dockToolbox(true);
         this.processUpdatedProps();
     }
@@ -147,7 +148,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @inheritdoc
      */
-    componentDidUpdate(prevProps: IProps) {
+    override componentDidUpdate(prevProps: IProps) {
         const { _videoUrl } = this.props;
 
         if (prevProps._videoUrl !== _videoUrl) {
@@ -162,7 +163,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @inheritdoc
      */
-    componentWillUnmount() {
+    override componentWillUnmount() {
         sendAnalytics(createEvent('stopped'));
 
         if (this.dispose) {
@@ -177,20 +178,22 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    processUpdatedProps() {
+    async processUpdatedProps() {
         const { _status, _time, _isOwner, _muted } = this.props;
 
         if (_isOwner) {
             return;
         }
 
-        const playerTime = this.getTime();
+        const playerTime = await this.getTime();
+
+        logger.info(`Time in proccessUpdated ${playerTime}`);
 
         if (shouldSeekToPosition(Number(_time), Number(playerTime))) {
-            this.seek(Number(_time));
+            await this.seek(Number(_time));
         }
 
-        if (this.getPlaybackStatus() !== _status) {
+        if (await this.getPlaybackStatus() !== _status) {
             if (_status === PLAYBACK_STATUSES.PLAYING) {
                 this.play();
             }
@@ -271,8 +274,8 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    fireUpdatePlayingVideoEvent() {
-        if (this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING) {
+    async fireUpdatePlayingVideoEvent() {
+        if (await this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING) {
             this.fireUpdateSharedVideoEvent();
         }
     }
@@ -282,14 +285,13 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {void}
      */
-    fireUpdateSharedVideoEvent() {
+    async fireUpdateSharedVideoEvent() {
         const { _isOwner } = this.props;
 
         if (!_isOwner) {
             return;
         }
-
-        const status = this.getPlaybackStatus();
+        const status = await this.getPlaybackStatus();
 
         if (!Object.values(PLAYBACK_STATUSES).includes(status ?? '')) {
             return;
@@ -304,7 +306,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
         _setSharedVideoStatus({
             videoUrl: _videoUrl,
             status,
-            time: this.getTime(),
+            time: await this.getTime(),
             ownerId: _ownerId,
             muted: this.isMuted()
         });
@@ -319,8 +321,8 @@ class AbstractVideoManager extends PureComponent<IProps> {
      * currently on.
      */
     isSharedVideoVolumeOn() {
-        return this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING
-                && !this.isMuted()
+        // await this.getPlaybackStatus() === PLAYBACK_STATUSES.PLAYING // remove calling getPlaybackStatus for now so we don't have to add async everywhere
+        return !this.isMuted()
                 && Number(this.getVolume()) > 0;
     }
 
@@ -346,7 +348,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      * @param {number} _time - Time to seek to.
      * @returns {void}
      */
-    seek(_time: number) {
+    async seek(_time: number) {
         // to be implemented by subclass
     }
 
@@ -355,7 +357,7 @@ class AbstractVideoManager extends PureComponent<IProps> {
      *
      * @returns {string}
      */
-    getPlaybackStatus(): string | undefined {
+    async getPlaybackStatus(): Promise<string | undefined> {
         return;
     }
 
@@ -416,9 +418,9 @@ class AbstractVideoManager extends PureComponent<IProps> {
     /**
      * Retrieves current time.
      *
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    getTime() {
+    async getTime(): Promise<number> {
         return 0;
     }
 

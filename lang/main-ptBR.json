@@ -935,7 +935,6 @@
         "premeeting": "Pré-reunião",
         "proceedAnyway": "Prosseguir mesmo assim",
         "screenSharingError": "Erro de compartilhamento de tela:",
-        "showScreen": "Habilitar tela pré-reunião",
         "startWithPhone": "Iniciar com o áudio da ligação",
         "unsafeRoomConsent": "Eu entendo os riscos, desejo ingressar na reunião",
         "videoOnlyError": "Erro de vídeo:",
@@ -1007,7 +1006,7 @@
         "localRecordingStartWarningTitle": "Parar a gravação para salvá-la",
         "localRecordingVideoStop": "Ao parar o seu vídeo a gravação local também será parada. Tem certeza que deseja continuar?",
         "localRecordingVideoWarning": "Para gravar o seu vídeo você precisa ativá-lo antes de inicar a gravação",
-        "localRecordingWarning": "Tenha certeza de selecionar a aba atual para usar o áudio e vídeo corretos. A gravação está atualmente limitada a 1GB, que corresponde a aproximadamente 100 minutos.",
+        "localRecordingWarning": "Tenha certeza de selecionar a aba atual para usar o áudio e vídeo corretos.",
         "loggedIn": "Conectado como {{userName}}",
         "noMicPermission": "Trilha para o microfone não pôde ser criada. Por favor conceda permissão para usar o microfone.",
         "noStreams": "Nenhum fluxo de áudio ou vídeo detectado.",
@@ -1067,7 +1066,7 @@
         "incomingMessage": "Mensagem recebida",
         "language": "Idioma",
         "loggedIn": "Conectado como {{name}}",
-        "maxStageParticipants": "Número máximo de participantes que podem ser fixados no palco principal (EXPERIMENTAL)",
+        "maxStageParticipants": "Número máximo de participantes que podem ser fixados no palco principal",
         "microphones": "Microfones",
         "moderator": "Moderador",
         "moderatorOptions": "Opções de moderador",
@@ -1370,16 +1369,7 @@
     },
     "unpinParticipant": "{{participantName}} - Desafixar",
     "userMedia": {
-        "androidGrantPermissions": "Selecione <b><i>Permitir</i></b> quando seu navegador perguntar pelas permissões.",
-        "chromeGrantPermissions": "Selecione <b><i>Permitir</i></b> quando seu navegador perguntar pelas permissões.",
-        "edgeGrantPermissions": "Selecione <b><i>Sim</i></b> quando seu navegador perguntar pelas permissões.",
-        "electronGrantPermissions": "Dê as permissões para usar sua câmera e microfone",
-        "firefoxGrantPermissions": "Selecione <b><i>Compartilhar Dispositivos Selecionados</i></b> quando seu navegador perguntar pelas permissões.",
-        "iexplorerGrantPermissions": "Selecione <b><i>OK</i></b> quando seu navegador perguntar pelas permissões.",
-        "nwjsGrantPermissions": "Dê as permissões para usar sua câmera e microfone",
-        "operaGrantPermissions": "Selecione <b><i>Permitir</i></b> quando seu navegador perguntar pelas permissões.",
-        "react-nativeGrantPermissions": "Selecione <b><i>Permitir</i></b> quando seu navegador perguntar pelas permissões.",
-        "safariGrantPermissions": "Selecione <b><i>OK</i></b> quando seu navegador perguntar pelas permissões."
+        "grantPermissions": "Dê as permissões para usar sua câmera e microfone."
     },
     "videoSIPGW": {
         "busy": "Estamos trabalhando para liberar recursos. Por favor, tente novamente em alguns minutos.",

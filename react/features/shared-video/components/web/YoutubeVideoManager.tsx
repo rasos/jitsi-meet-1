@@ -38,7 +38,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {string}
      */
-    getPlaybackStatus() {
+    override async getPlaybackStatus() {
         let status;
 
         if (!this.player) {
@@ -63,7 +63,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {boolean}
      */
-    isMuted() {
+    override isMuted() {
         return this.player?.isMuted();
     }
 
@@ -72,18 +72,21 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {number}
      */
-    getVolume() {
+    override getVolume() {
         return this.player?.getVolume();
     }
 
     /**
      * Retrieves current time.
      *
-     * @returns {number}
+     * @returns {Promise<number>}
      */
-    getTime() {
-        return this.player?.getCurrentTime();
+    override async getTime(): Promise<number> {
+        const time = this.player?.getCurrentTime();
+
+        return time;
     }
+
 
     /**
      * Seeks video to provided time.
@@ -92,7 +95,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    seek(time: number) {
+    override seek(time: number) {
         return this.player?.seekTo(time);
     }
 
@@ -101,7 +104,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    play() {
+    override play() {
         return this.player?.playVideo();
     }
 
@@ -110,7 +113,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    pause() {
+    override pause() {
         return this.player?.pauseVideo();
     }
 
@@ -119,7 +122,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    mute() {
+    override mute() {
         return this.player?.mute();
     }
 
@@ -128,7 +131,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    unMute() {
+    override unMute() {
         return this.player?.unMute();
     }
 
@@ -137,7 +140,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @returns {void}
      */
-    dispose() {
+    override dispose() {
         if (this.player) {
             this.player.destroy();
             this.player = null;
@@ -219,7 +222,7 @@ class YoutubeVideoManager extends AbstractVideoManager {
      *
      * @inheritdoc
      */
-    render() {
+    override render() {
         return (
             <YouTube
                 { ...this.getPlayerOptions() } />

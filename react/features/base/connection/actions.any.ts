@@ -4,7 +4,8 @@ import { IReduxState, IStore } from '../../app/types';
 import { conferenceLeft, conferenceWillLeave, redirect } from '../conference/actions';
 import { getCurrentConference } from '../conference/functions';
 import { IConfigState } from '../config/reducer';
-import JitsiMeetJS, { JitsiConnectionErrors, JitsiConnectionEvents } from '../lib-jitsi-meet';
+import JitsiMeetJS, { JitsiConnectionEvents } from '../lib-jitsi-meet';
+import { isEmbedded } from '../util/embedUtils';
 import { parseURLParams } from '../util/parseURLParams';
 import {
     appendURLParam,
@@ -119,7 +120,8 @@ export function constructOptions(state: IReduxState) {
     const params = parseURLParams(locationURL || '');
     const iceServersOverride = params['iceServers.replace'];
 
-    if (iceServersOverride) {
+    // Allow iceServersOverride only when jitsi-meet is in an iframe.
+    if (isEmbedded() && iceServersOverride) {
         options.iceServersOverride = iceServersOverride;
     }
 
@@ -288,8 +290,7 @@ export function _connectInternal(id?: string, password?: string) {
                     credentials,
                     details,
                     name: err,
-                    message,
-                    recoverable: err === JitsiConnectionErrors.CONFERENCE_REQUEST_FAILED ? false : undefined
+                    message
                 }));
 
                 reject(err);

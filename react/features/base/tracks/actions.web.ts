@@ -2,6 +2,7 @@
 import { AUDIO_ONLY_SCREEN_SHARE_NO_TRACK } from '../../../../modules/UI/UIErrors';
 import { IReduxState, IStore } from '../../app/types';
 import { showModeratedNotification } from '../../av-moderation/actions';
+import { MEDIA_TYPE as AVM_MEDIA_TYPE } from '../../av-moderation/constants';
 import { shouldShowModeratedNotification } from '../../av-moderation/functions';
 import { setNoiseSuppressionEnabled } from '../../noise-suppression/actions';
 import { showErrorNotification, showNotification } from '../../notifications/actions';
@@ -16,15 +17,18 @@ import { getCurrentConference } from '../conference/functions';
 import { notifyCameraError, notifyMicError } from '../devices/actions.web';
 import { openDialog } from '../dialog/actions';
 import { JitsiTrackErrors, JitsiTrackEvents, browser } from '../lib-jitsi-meet';
+import { createLocalTrack } from '../lib-jitsi-meet/functions.any';
 import { gumPending, setScreenshareMuted } from '../media/actions';
-import { MEDIA_TYPE, MediaType, VIDEO_TYPE } from '../media/constants';
-import { IGUMPendingState } from '../media/types';
-
 import {
-    addLocalTrack,
-    replaceLocalTrack,
-    toggleCamera
-} from './actions.any';
+    CAMERA_FACING_MODE,
+    MEDIA_TYPE,
+    MediaType,
+    VIDEO_TYPE,
+} from '../media/constants';
+import { IGUMPendingState } from '../media/types';
+import { updateSettings } from '../settings/actions';
+
+import { addLocalTrack, replaceLocalTrack } from './actions.any';
 import AllowToggleCameraDialog from './components/web/AllowToggleCameraDialog';
 import {
     createLocalTracksF,
@@ -52,10 +56,10 @@ export function toggleScreensharing(
         shareOptions: IShareOptions = {}) {
     return (dispatch: IStore['dispatch'], getState: IStore['getState']) => {
         // check for A/V Moderation when trying to start screen sharing
-        if ((enabled || enabled === undefined) && shouldShowModeratedNotification(MEDIA_TYPE.VIDEO, getState())) {
-            dispatch(showModeratedNotification(MEDIA_TYPE.SCREENSHARE));
+        if ((enabled || enabled === undefined) && shouldShowModeratedNotification(AVM_MEDIA_TYPE.DESKTOP, getState())) {
+            dispatch(showModeratedNotification(AVM_MEDIA_TYPE.DESKTOP));
 
-            return Promise.reject();
+            return Promise.resolve();
         }
 
         return _toggleScreenSharing({
@@ -157,9 +161,9 @@ async function _toggleScreenSharing(
             try {
                 tracks = await createLocalTracksF(options) as any[];
             } catch (error) {
-                dispatch(handleScreenSharingError(error, NOTIFICATION_TIMEOUT_TYPE.MEDIUM));
+                dispatch(handleScreenSharingError(error));
 
-                throw error;
+                return;
             }
         }
 
@@ -171,9 +175,9 @@ async function _toggleScreenSharing(
             desktopVideoTrack.dispose();
 
             if (!desktopAudioTrack) {
-                dispatch(handleScreenSharingError(AUDIO_ONLY_SCREEN_SHARE_NO_TRACK, NOTIFICATION_TIMEOUT_TYPE.MEDIUM));
+                dispatch(handleScreenSharingError(AUDIO_ONLY_SCREEN_SHARE_NO_TRACK));
 
-                throw new Error(AUDIO_ONLY_SCREEN_SHARE_NO_TRACK);
+                return;
             }
         } else if (desktopVideoTrack) {
             if (localScreenshare) {
@@ -359,8 +363,7 @@ export function createInitialAVTracks(options: ICreateInitialTracksOptions, reco
     return (dispatch: IStore['dispatch'], _getState: IStore['getState']) => {
         const {
             devices,
-            timeout,
-            firePermissionPromptIsShownEvent
+            timeout
         } = options;
 
         dispatch(gumPending(devices, IGUMPendingState.PENDING_UNMUTE));
@@ -400,16 +403,14 @@ export function createInitialAVTracks(options: ICreateInitialTracksOptions, reco
             if (devices.includes(MEDIA_TYPE.AUDIO)) {
                 gUMPromises.push(createLocalTracksF({
                     devices: [ MEDIA_TYPE.AUDIO ],
-                    timeout,
-                    firePermissionPromptIsShownEvent
+                    timeout
                 }));
             }
 
             if (devices.includes(MEDIA_TYPE.VIDEO)) {
                 gUMPromises.push(createLocalTracksF({
                     devices: [ MEDIA_TYPE.VIDEO ],
-                    timeout,
-                    firePermissionPromptIsShownEvent
+                    timeout
                 }));
             }
 
@@ -460,7 +461,7 @@ export function displayErrorsForCreateInitialLocalTracks(errors: IInitialTracksE
         } = errors;
 
         if (screenSharingError) {
-            dispatch(handleScreenSharingError(screenSharingError, NOTIFICATION_TIMEOUT_TYPE.LONG));
+            dispatch(handleScreenSharingError(screenSharingError));
         }
         if (audioOnlyError || videoOnlyError) {
             if (audioOnlyError) {
@@ -479,12 +480,10 @@ export function displayErrorsForCreateInitialLocalTracks(errors: IInitialTracksE
  *
  * @private
  * @param {Error | AUDIO_ONLY_SCREEN_SHARE_NO_TRACK} error - The error.
- * @param {NOTIFICATION_TIMEOUT_TYPE} timeout - The time for showing the notification.
  * @returns {Function}
  */
 export function handleScreenSharingError(
-        error: Error | AUDIO_ONLY_SCREEN_SHARE_NO_TRACK,
-        timeout: NOTIFICATION_TIMEOUT_TYPE) {
+        error: Error | AUDIO_ONLY_SCREEN_SHARE_NO_TRACK) {
     return (dispatch: IStore['dispatch']) => {
         logger.error('failed to share local desktop', error);
 
@@ -511,6 +510,34 @@ export function handleScreenSharingError(
         dispatch(showErrorNotification({
             descriptionKey,
             titleKey
-        }, timeout));
+        }));
+    };
+}
+
+/**
+ * Toggles the facingMode constraint on the video stream.
+ *
+ * @returns {Function}
+ */
+export function toggleCamera() {
+    return async (dispatch: IStore['dispatch'], getState: IStore['getState']) => {
+        const state = getState();
+        const tracks = state['features/base/tracks'];
+        const localVideoTrack = getLocalVideoTrack(tracks)?.jitsiTrack;
+        const currentFacingMode = localVideoTrack.getCameraFacingMode();
+        const { localFlipX } = state['features/base/settings'];
+        const targetFacingMode = currentFacingMode === CAMERA_FACING_MODE.USER
+            ? CAMERA_FACING_MODE.ENVIRONMENT
+            : CAMERA_FACING_MODE.USER;
+
+        // Update the flipX value so the environment facing camera is not flipped, before the new track is created.
+        dispatch(updateSettings({ localFlipX: targetFacingMode === CAMERA_FACING_MODE.USER ? localFlipX : false }));
+
+        // On mobile only one camera can be open at a time, so first stop the current camera track.
+        await dispatch(replaceLocalTrack(localVideoTrack, null));
+
+        const newVideoTrack = await createLocalTrack('video', null, null, { facingMode: targetFacingMode });
+
+        await dispatch(replaceLocalTrack(null, newVideoTrack));
     };
 }

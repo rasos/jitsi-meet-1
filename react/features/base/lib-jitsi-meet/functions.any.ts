@@ -25,10 +25,6 @@ export function createLocalTrack(type: string, deviceId: string | null, timeout?
         JitsiMeetJS.createLocalTracks({
             cameraDeviceId: deviceId,
             devices: [ type ],
-
-            // eslint-disable-next-line camelcase
-            firefox_fake_device:
-                window.config?.firefox_fake_device,
             micDeviceId: deviceId,
             timeout,
             ...additionalOptions
@@ -97,8 +93,7 @@ export function isFatalJitsiConnectionError(error: Error | string | ConnectionFa
     }
 
     return (
-        error === JitsiConnectionErrors.CONFERENCE_REQUEST_FAILED
-            || error === JitsiConnectionErrors.CONNECTION_DROPPED_ERROR
+        error === JitsiConnectionErrors.CONNECTION_DROPPED_ERROR
             || error === JitsiConnectionErrors.OTHER_ERROR
             || error === JitsiConnectionErrors.SERVER_ERROR);
 }

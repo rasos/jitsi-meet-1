@@ -25,7 +25,7 @@ export interface IProps extends AbstractDialogTabProps, WithTranslation {
     displayShortcuts: boolean;
 
     /**
-     * Wether the keyboard shortcuts are enabled or not.
+     * Whether the keyboard shortcuts are enabled or not.
      */
     keyboardShortcutsEnabled: boolean;
 
@@ -145,7 +145,7 @@ class ShortcutsTab extends AbstractDialogTab<IProps, any> {
      * @inheritdoc
      * @returns {ReactElement}
      */
-    render() {
+    override render() {
         const {
             displayShortcuts,
             keyboardShortcutsHelpDescriptions,
