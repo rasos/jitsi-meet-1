@@ -1,12 +1,12 @@
 import { IConfig } from '../../react/features/base/config/configType';
 
 import type { Participant } from './Participant';
-import WebhookProxy from './WebhookProxy';
+import type WebhookProxy from './WebhookProxy';
 
 export type IContext = {
-    conferenceJid: string;
-    dialInPin: string;
+    data: any;
     iframeAPI: boolean;
+    isJaasAvailable: () => boolean;
     jwtKid: string;
     jwtPrivateKeyPath: string;
     keepAlive: Array<any>;
@@ -14,7 +14,6 @@ export type IContext = {
     p2: Participant;
     p3: Participant;
     p4: Participant;
-    roomKey: string;
     roomName: string;
     skipSuiteTests: boolean;
     times: any;
@@ -22,6 +21,11 @@ export type IContext = {
 };
 
 export type IJoinOptions = {
+
+    /**
+     * Overwrites the base url set in the config.
+     */
+    baseUrl?: string;
 
     /**
      * Config overwrites to use.
@@ -32,6 +36,17 @@ export type IJoinOptions = {
      * The display name to use.
      */
     displayName?: string;
+
+    /**
+     * Whether to create a moderator token for joining.
+     */
+    moderator?: boolean;
+
+    /**
+     * When joining the first participant and jwt singing material is available and a provided token
+     * is available, prefer generating a new token for the first participant.
+     */
+    preferGenerateToken?: boolean;
 
     /**
      * Whether to skip setting display name.
@@ -53,4 +68,9 @@ export type IJoinOptions = {
      * based on the logic of the test.
      */
     skipWaitToJoin?: boolean;
+
+    /**
+     * Whether to create a visitor token for joining.
+     */
+    visitor?: boolean;
 };

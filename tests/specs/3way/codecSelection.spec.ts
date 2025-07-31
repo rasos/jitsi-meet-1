@@ -52,8 +52,10 @@ describe('Codec selection', () => {
         // Check if media is playing on p3.
         expect(await p3.execute(() => JitsiMeetJS.app.testing.isLargeVideoReceived())).toBe(true);
 
+        const majorVersion = parseInt(p1.driver.capabilities.browserVersion || '0', 10);
+
         // Check if p1 is encoding in VP9, p2 in VP8 and p3 in AV1 as per their codec preferences.
-        // Except on Firefox because it doesn't support AV1/VP9 encode and AV1 decode.
+        // Except on Firefox because it doesn't support VP9 encode.
         if (p1.driver.isFirefox) {
             expect(await p1.execute(() => JitsiMeetJS.app.testing.isLocalCameraEncodingVp8())).toBe(true);
         } else {
@@ -63,7 +65,7 @@ describe('Codec selection', () => {
         expect(await p2.execute(() => JitsiMeetJS.app.testing.isLocalCameraEncodingVp8())).toBe(true);
 
         // If there is a Firefox ep in the call, all other eps will switch to VP9.
-        if (p1.driver.isFirefox) {
+        if (p1.driver.isFirefox && majorVersion < 136) {
             expect(await p3.execute(() => JitsiMeetJS.app.testing.isLocalCameraEncodingVp9())).toBe(true);
         } else {
             expect(await p3.execute(() => JitsiMeetJS.app.testing.isLocalCameraEncodingAv1())).toBe(true);

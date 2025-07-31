@@ -1,4 +1,5 @@
 import { ensureOneParticipant, ensureTwoParticipants, joinSecondParticipant } from '../../helpers/participants';
+import type SecurityDialog from '../../pageobjects/SecurityDialog';
 
 /**
  * 1. Lock the room (make sure the image changes to locked)
@@ -28,11 +29,14 @@ describe('Lock Room', () => {
         const p2PasswordDialog = p2.getPasswordDialog();
 
         await p2PasswordDialog.waitForDialog();
-        await p2PasswordDialog.submitPassword(`${ctx.roomKey}1234`);
+        await p2PasswordDialog.submitPassword(`${ctx.data.roomKey}1234`);
+
+        // give sometime to the password prompt to disappear and send the password
+        await p2.driver.pause(500);
 
         // wait for password prompt
         await p2PasswordDialog.waitForDialog();
-        await p2PasswordDialog.submitPassword(ctx.roomKey);
+        await p2PasswordDialog.submitPassword(ctx.data.roomKey);
 
         await p2.waitToJoinMUC();
 
@@ -41,7 +45,7 @@ describe('Lock Room', () => {
         await p2.getToolbar().clickSecurityButton();
         await p2SecurityDialog.waitForDisplay();
 
-        expect(await p2SecurityDialog.isLocked()).toBe(true);
+        await waitForRoomLockState(p2SecurityDialog, true);
     });
 
     it('unlock room', async () => {
@@ -63,7 +67,7 @@ describe('Lock Room', () => {
         await p2.getToolbar().clickSecurityButton();
         await p2SecurityDialog.waitForDisplay();
 
-        expect(await p2SecurityDialog.isLocked()).toBe(false);
+        await waitForRoomLockState(p2SecurityDialog, false);
 
         await p2SecurityDialog.clickCloseButton();
     });
@@ -79,11 +83,11 @@ describe('Lock Room', () => {
         await p2.getToolbar().clickSecurityButton();
         await p2SecurityDialog.waitForDisplay();
 
-        expect(await p2SecurityDialog.isLocked()).toBe(true);
+        await waitForRoomLockState(p2SecurityDialog, true);
 
         await participant1UnlockRoom();
 
-        expect(await p2SecurityDialog.isLocked()).toBe(false);
+        await waitForRoomLockState(p2SecurityDialog, false);
     });
     it('unlock after participant enter wrong password', async () => {
         // P1 locks the room. Participant tries to enter using wrong password.
@@ -102,7 +106,10 @@ describe('Lock Room', () => {
         const p2PasswordDialog = p2.getPasswordDialog();
 
         await p2PasswordDialog.waitForDialog();
-        await p2PasswordDialog.submitPassword(`${ctx.roomKey}1234`);
+        await p2PasswordDialog.submitPassword(`${ctx.data.roomKey}1234`);
+
+        // give sometime to the password prompt to disappear and send the password
+        await p2.driver.pause(500);
 
         // wait for password prompt
         await p2PasswordDialog.waitForDialog();
@@ -117,7 +124,7 @@ describe('Lock Room', () => {
         await p2.getToolbar().clickSecurityButton();
         await p2SecurityDialog.waitForDisplay();
 
-        expect(await p2SecurityDialog.isLocked()).toBe(false);
+        await waitForRoomLockState(p2SecurityDialog, false);
     });
 });
 
@@ -125,7 +132,7 @@ describe('Lock Room', () => {
  * Participant1 locks the room.
  */
 async function participant1LockRoom() {
-    ctx.roomKey = `${Math.trunc(Math.random() * 1_000_000)}`;
+    ctx.data.roomKey = `${Math.trunc(Math.random() * 1_000_000)}`;
 
     const { p1 } = ctx;
     const p1SecurityDialog = p1.getSecurityDialog();
@@ -133,16 +140,16 @@ async function participant1LockRoom() {
     await p1.getToolbar().clickSecurityButton();
     await p1SecurityDialog.waitForDisplay();
 
-    expect(await p1SecurityDialog.isLocked()).toBe(false);
+    await waitForRoomLockState(p1SecurityDialog, false);
 
-    await p1SecurityDialog.addPassword(ctx.roomKey);
+    await p1SecurityDialog.addPassword(ctx.data.roomKey);
 
     await p1SecurityDialog.clickCloseButton();
 
     await p1.getToolbar().clickSecurityButton();
     await p1SecurityDialog.waitForDisplay();
 
-    expect(await p1SecurityDialog.isLocked()).toBe(true);
+    await waitForRoomLockState(p1SecurityDialog, true);
 
     await p1SecurityDialog.clickCloseButton();
 }
@@ -159,13 +166,22 @@ async function participant1UnlockRoom() {
 
     await p1SecurityDialog.removePassword();
 
-    await p1.driver.waitUntil(
-        async () => !await p1SecurityDialog.isLocked(),
-        {
-            timeout: 3_000, // 3 seconds
-            timeoutMsg: `Timeout waiting for the room to unlock for ${p1.name}.`
-        }
-    );
+    await waitForRoomLockState(p1SecurityDialog, false);
 
     await p1SecurityDialog.clickCloseButton();
+}
+
+/**
+ * Waits for the room to be locked or unlocked.
+ * @param securityDialog
+ * @param locked
+ */
+function waitForRoomLockState(securityDialog: SecurityDialog, locked: boolean) {
+    return securityDialog.participant.driver.waitUntil(
+        async () => await securityDialog.isLocked() === locked,
+        {
+            timeout: 3_000, // 3 seconds
+            timeoutMsg: `Timeout waiting for the room to unlock for ${securityDialog.participant.name}.`
+        }
+    );
 }

@@ -16,8 +16,10 @@ local new_id = require 'util.id'.medium;
 local filters = require 'util.filters';
 local array = require 'util.array';
 local set = require 'util.set';
+local json = require 'cjson.safe';
 
 local util = module:require 'util';
+local is_admin = util.is_admin;
 local ends_with = util.ends_with;
 local is_vpaas = util.is_vpaas;
 local room_jid_match_rewrite = util.room_jid_match_rewrite;
@@ -26,6 +28,7 @@ local get_focus_occupant = util.get_focus_occupant;
 local internal_room_jid_match_rewrite = util.internal_room_jid_match_rewrite;
 local presence_check_status = util.presence_check_status;
 local respond_iq_result = util.respond_iq_result;
+local table_compare = util.table_compare;
 
 local PARTICIPANT_PROP_RAISE_HAND = 'jitsi_participant_raisedHand';
 local PARTICIPANT_PROP_REQUEST_TRANSCRIPTION = 'jitsi_participant_requestingTranscription';
@@ -62,11 +65,6 @@ local measure_visitors = module:measure('vnode-visitors', 'amount');
 local sent_iq_cache = require 'util.cache'.new(200);
 
 local sessions = prosody.full_sessions;
-
-local um_is_admin = require 'core.usermanager'.is_admin;
-local function is_admin(jid)
-    return um_is_admin(jid, module.host);
-end
 
 local function send_transcriptions_update(room)
     -- let's notify main prosody
@@ -327,6 +325,7 @@ module:hook('muc-broadcast-presence', function (event)
     -- a promotion detected let's send it to main prosody
     if raiseHand then
         local user_id;
+        local group_id;
         local is_moderator;
         local session = sessions[occupant.jid];
         local identity = session and session.jitsi_meet_context_user;
@@ -342,12 +341,9 @@ module:hook('muc-broadcast-presence', function (event)
             -- so we can be auto promoted
             if identity and identity.id then
                 user_id = session.jitsi_meet_context_user.id;
+                group_id = session.jitsi_meet_context_group;
 
-                if room._data.moderator_id then
-                    if room._data.moderator_id == user_id then
-                        is_moderator = true;
-                    end
-                elseif session.auth_token and auto_promoted_with_token then
+                if session.auth_token and auto_promoted_with_token then
                     if not session.jitsi_meet_tenant_mismatch or session.jitsi_web_query_prefix == '' then
                         -- non-vpaas and having a token is considered a moderator, and if it is not in '/' tenant
                         -- the tenant from url and token should match
@@ -371,6 +367,7 @@ module:hook('muc-broadcast-presence', function (event)
             jid = occupant.jid,
             time = raiseHand,
             userId = user_id,
+            groupId = group_id,
             forcePromote = is_moderator and 'true' or 'false';
           }):up();
 
@@ -646,7 +643,6 @@ local function iq_from_main_handler(event)
     -- if this is update it will either set or remove the password
     room:set_password(node.attr.password);
     room._data.meetingId = node.attr.meetingId;
-    room._data.moderator_id = node.attr.moderatorId;
     local createdTimestamp = node.attr.createdTimestamp;
     room.created_timestamp = createdTimestamp and tonumber(createdTimestamp) or nil;
 
@@ -675,6 +671,29 @@ local function iq_from_main_handler(event)
                 and room.moderators_list:contains(jid.resource(o.nick)) then
                 room:set_affiliation(true, o.bare_jid, 'owner');
             end
+        end
+    end
+
+    local files = node:get_child('files');
+    if files then
+        local received_files = {};
+        for _, child in ipairs(files.tags) do
+            if child.name == 'file' then
+                received_files[child.attr.id] = json.decode(child:get_text());
+            end
+        end
+
+        -- fire events so file sharing component will add/remove files and will notify clients
+        local removed, added = table_compare(room.jitsi_shared_files or {}, received_files)
+        for _, id in ipairs(removed) do
+            module:context(local_domain):fire_event('jitsi-filesharing-remove', {
+                room = room; id = id;
+            });
+        end
+        for _, id in ipairs(added) do
+            module:context(local_domain):fire_event('jitsi-filesharing-add', {
+                room = room; file = received_files[id];
+            });
         end
     end
 

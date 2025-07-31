@@ -1,4 +1,4 @@
-import { P1_DISPLAY_NAME, P3_DISPLAY_NAME, Participant } from '../../helpers/Participant';
+import { P1, P3, Participant } from '../../helpers/Participant';
 import {
     ensureOneParticipant,
     ensureThreeParticipants,
@@ -34,8 +34,8 @@ describe('Lobby', () => {
 
         const notificationText = await p2.getNotifications().getLobbyParticipantAccessGranted();
 
-        expect(notificationText.includes(P1_DISPLAY_NAME)).toBe(true);
-        expect(notificationText.includes(P3_DISPLAY_NAME)).toBe(true);
+        expect(notificationText.includes(P1)).toBe(true);
+        expect(notificationText.includes(P3)).toBe(true);
 
         await p2.getNotifications().closeLobbyParticipantAccessGranted();
 
@@ -49,7 +49,7 @@ describe('Lobby', () => {
         // now check third one display name in the room, is the one set in the prejoin screen
         const name = await p1.getFilmstrip().getRemoteDisplayName(await p3.getEndpointId());
 
-        expect(name).toBe(P3_DISPLAY_NAME);
+        expect(name).toBe(P3);
 
         await p3.hangup();
     });
@@ -67,8 +67,8 @@ describe('Lobby', () => {
         // deny notification on 2nd participant
         const notificationText = await p2.getNotifications().getLobbyParticipantAccessDenied();
 
-        expect(notificationText.includes(P1_DISPLAY_NAME)).toBe(true);
-        expect(notificationText.includes(P3_DISPLAY_NAME)).toBe(true);
+        expect(notificationText.includes(P1)).toBe(true);
+        expect(notificationText.includes(P3)).toBe(true);
 
         await p2.getNotifications().closeLobbyParticipantAccessDenied();
 
@@ -108,7 +108,7 @@ describe('Lobby', () => {
         // now check third one display name in the room, is the one set in the prejoin screen
         const name = await p1.getFilmstrip().getRemoteDisplayName(await p3.getEndpointId());
 
-        expect(name).toBe(P3_DISPLAY_NAME);
+        expect(name).toBe(P3);
 
         await p3.hangup();
     });
@@ -195,6 +195,10 @@ describe('Lobby', () => {
     });
 
     it('change of moderators in lobby', async () => {
+        // no moderator switching if jaas is available
+        if (ctx.isJaasAvailable()) {
+            return;
+        }
         await hangupAllParticipants();
 
         await ensureTwoParticipants(ctx);
@@ -222,11 +226,11 @@ describe('Lobby', () => {
 
         // here the important check is whether the moderator sees the knocking participant
         await enterLobby(p2, false);
-
-        await hangupAllParticipants();
     });
 
     it('shared password', async () => {
+        await hangupAllParticipants();
+
         await ensureTwoParticipants(ctx);
 
         const { p1 } = ctx;
@@ -240,7 +244,7 @@ describe('Lobby', () => {
 
         expect(await p1SecurityDialog.isLocked()).toBe(false);
 
-        const roomPasscode = String(Math.random() * 1_000);
+        const roomPasscode = String(Math.trunc(Math.random() * 1_000_000));
 
         await p1SecurityDialog.addPassword(roomPasscode);
 
@@ -283,6 +287,10 @@ describe('Lobby', () => {
     });
 
     it('moderator leaves while lobby enabled', async () => {
+        // no moderator switching if jaas is available
+        if (ctx.isJaasAvailable()) {
+            return;
+        }
         const { p1, p2, p3 } = ctx;
 
         await p3.hangup();
@@ -302,7 +310,7 @@ describe('Lobby', () => {
     });
 
     it('reject and approve in pre-join', async () => {
-        await ctx.p2.hangup();
+        await hangupAllParticipants();
 
         await ensureTwoParticipants(ctx);
         await enableLobby();
@@ -341,7 +349,7 @@ describe('Lobby', () => {
         // check that moderator (participant 1) sees notification about participant in lobby
         const name = await p1.getNotifications().getKnockingParticipantName();
 
-        expect(name).toBe(P3_DISPLAY_NAME);
+        expect(name).toBe(P3);
         expect(await lobbyScreen.isLobbyRoomJoined()).toBe(true);
 
         await p1ParticipantsPane.open();
@@ -371,7 +379,7 @@ async function enableLobby() {
     await p1SecurityDialog.toggleLobby();
     await p1SecurityDialog.waitForLobbyEnabled();
 
-    expect((await p2.getNotifications().getLobbyEnabledText()).includes(p1.displayName)).toBe(true);
+    expect((await p2.getNotifications().getLobbyEnabledText()).includes(p1.name)).toBe(true);
 
     await p2.getNotifications().closeLobbyEnabled();
 
@@ -459,7 +467,7 @@ async function enterLobby(participant: Participant, enterDisplayName = false, us
         // this check needs to be added once the functionality exists
 
         // enter display name
-        await screen.enterDisplayName(P3_DISPLAY_NAME);
+        await screen.enterDisplayName(P3);
 
         // check join button is enabled
         classes = await joinButton.getAttribute('class');
@@ -471,8 +479,12 @@ async function enterLobby(participant: Participant, enterDisplayName = false, us
     await screen.waitToJoinLobby();
 
     // check no join button
-    expect(!await joinButton.isExisting() || !await joinButton.isDisplayed() || !await joinButton.isEnabled())
-        .toBe(true);
+    await p3.driver.waitUntil(
+        async () => !await joinButton.isExisting() || !await joinButton.isDisplayed() || !await joinButton.isEnabled(),
+        {
+            timeout: 2_000,
+            timeoutMsg: 'Join button is still available for p3'
+        });
 
     // new screen, is password button shown
     const passwordButton = screen.getPasswordButton();
@@ -483,7 +495,7 @@ async function enterLobby(participant: Participant, enterDisplayName = false, us
     // check that moderator (participant 1) sees notification about participant in lobby
     const name = await participant.getNotifications().getKnockingParticipantName();
 
-    expect(name).toBe(P3_DISPLAY_NAME);
+    expect(name).toBe(P3);
     expect(await screen.isLobbyRoomJoined()).toBe(true);
 
     return name;

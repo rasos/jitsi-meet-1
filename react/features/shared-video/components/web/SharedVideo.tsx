@@ -158,7 +158,7 @@ class SharedVideo extends Component<IProps> {
      * @inheritdoc
      * @returns {React$Element}
      */
-    render() {
+    override render() {
         const { isEnabled, isResizing, isVideoShared, onStage, isPeerTube  } = this.props;
 
         if (!isEnabled || !isVideoShared) {
@@ -192,18 +192,19 @@ class SharedVideo extends Component<IProps> {
  */
 function _mapStateToProps(state: IReduxState) {
     const { videoUrl, isPeerTube } = state['features/shared-video'];
-    const { clientHeight, clientWidth } = state['features/base/responsive-ui'];
+    const { clientHeight, videoSpaceWidth } = state['features/base/responsive-ui'];
     const { visible, isResizing } = state['features/filmstrip'];
+    const { isResizing: isChatResizing } = state['features/chat'];
     const onStage = getLargeVideoParticipant(state)?.fakeParticipant === FakeParticipant.SharedVideo;
     const isVideoShared = isVideoPlaying(state);
 
     return {
         clientHeight,
-        clientWidth,
+        clientWidth: videoSpaceWidth,
         filmstripVisible: visible,
         filmstripWidth: getVerticalViewMaxWidth(state),
         isEnabled: isSharedVideoEnabled(state),
-        isResizing,
+        isResizing: isResizing || isChatResizing,
         isVideoShared,
         onStage,
         videoUrl,

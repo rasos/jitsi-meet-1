@@ -13,11 +13,25 @@ import Checkbox from '../../../base/ui/components/web/Checkbox';
  * The type of the React {@code Component} props of {@link ModeratorTab}.
  */
 export interface IProps extends AbstractDialogTabProps, WithTranslation {
+    /**
+     * Whether the user has selected the audio moderation feature to be enabled.
+     */
+    audioModerationEnabled: boolean;
+
+    /**
+     * Whether the user has selected the chat with permissions feature to be enabled.
+     */
+    chatWithPermissionsEnabled: boolean;
 
     /**
      * CSS classes object.
      */
     classes?: Partial<Record<keyof ReturnType<typeof styles>, string>>;
+
+    /**
+     * Whether to hide chat with permissions.
+     */
+    disableChatWithPermissions: boolean;
 
     /**
      * If set hides the reactions moderation setting.
@@ -61,6 +75,11 @@ export interface IProps extends AbstractDialogTabProps, WithTranslation {
      * enabled.
      */
     startVideoMuted: boolean;
+
+    /**
+     * Whether the user has selected the video moderation feature to be enabled.
+     */
+    videoModerationEnabled: boolean;
 }
 
 const styles = (theme: Theme) => {
@@ -103,6 +122,7 @@ class ModeratorTab extends AbstractDialogTab<IProps, any> {
         this._onStartReactionsMutedChanged = this._onStartReactionsMutedChanged.bind(this);
         this._onFollowMeEnabledChanged = this._onFollowMeEnabledChanged.bind(this);
         this._onFollowMeRecorderEnabledChanged = this._onFollowMeRecorderEnabledChanged.bind(this);
+        this._onChatWithPermissionsChanged = this._onChatWithPermissionsChanged.bind(this);
     }
 
     /**
@@ -171,13 +191,27 @@ class ModeratorTab extends AbstractDialogTab<IProps, any> {
     }
 
     /**
+     * Callback invoked to select if chat with permissions should be activated.
+     *
+     * @param {Object} e - The key event to handle.
+     *
+     * @returns {void}
+     */
+    _onChatWithPermissionsChanged({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) {
+        super._onChange({ chatWithPermissionsEnabled: checked });
+    }
+
+    /**
      * Implements React's {@link Component#render()}.
      *
      * @inheritdoc
      * @returns {ReactElement}
      */
-    render() {
+    override render() {
         const {
+            audioModerationEnabled,
+            chatWithPermissionsEnabled,
+            disableChatWithPermissions,
             disableReactionsModeration,
             followMeActive,
             followMeEnabled,
@@ -186,7 +220,8 @@ class ModeratorTab extends AbstractDialogTab<IProps, any> {
             startAudioMuted,
             startVideoMuted,
             startReactionsMuted,
-            t
+            t,
+            videoModerationEnabled
         } = this.props;
         const classes = withStyles.getClasses(this.props);
 
@@ -199,18 +234,18 @@ class ModeratorTab extends AbstractDialogTab<IProps, any> {
                 <h2 className = { classes.title }>
                     {t('settings.moderatorOptions')}
                 </h2>
-                <Checkbox
+                { !audioModerationEnabled && <Checkbox
                     checked = { startAudioMuted }
                     className = { classes.checkbox }
                     label = { t('settings.startAudioMuted') }
                     name = 'start-audio-muted'
-                    onChange = { this._onStartAudioMutedChanged } />
-                <Checkbox
+                    onChange = { this._onStartAudioMutedChanged } /> }
+                { !videoModerationEnabled && <Checkbox
                     checked = { startVideoMuted }
                     className = { classes.checkbox }
                     label = { t('settings.startVideoMuted') }
                     name = 'start-video-muted'
-                    onChange = { this._onStartVideoMutedChanged } />
+                    onChange = { this._onStartVideoMutedChanged } /> }
                 <Checkbox
                     checked = { followMeEnabled && !followMeActive && !followMeRecorderChecked }
                     className = { classes.checkbox }
@@ -232,6 +267,13 @@ class ModeratorTab extends AbstractDialogTab<IProps, any> {
                             label = { t('settings.startReactionsMuted') }
                             name = 'start-reactions-muted'
                             onChange = { this._onStartReactionsMutedChanged } /> }
+                { !disableChatWithPermissions
+                    && <Checkbox
+                        checked = { chatWithPermissionsEnabled }
+                        className = { classes.checkbox }
+                        label = { t('settings.chatWithPermissions') }
+                        name = 'chat-with-permissions'
+                        onChange = { this._onChatWithPermissionsChanged } /> }
             </div>
         );
     }

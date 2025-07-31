@@ -1,7 +1,7 @@
-import { inIframe } from '../util/iframeUtils';
+import { isEmbedded } from '../util/embedUtils';
 
 import extraConfigWhitelist from './extraConfigWhitelist';
-import inIframeConfigWhitelist from './inIframeConfigWhitelist';
+import isEmbeddedConfigWhitelist from './isEmbeddedConfigWhitelist';
 
 /**
  * The config keys to whitelist, the keys that can be overridden.
@@ -109,6 +109,7 @@ export default [
     'disablePolls',
     'disableProfile',
     'disableReactions',
+    'disableReactionsInChat',
     'disableReactionsModeration',
     'disableRecordAudioNotification',
     'disableRemoteControl',
@@ -150,6 +151,7 @@ export default [
     'enableTcc',
     'faceLandmarks',
     'feedbackPercentage',
+    'fileSharing.enabled',
     'filmstrip',
     'flags',
     'forceTurnRelay',
@@ -169,6 +171,7 @@ export default [
     'hideLobbyButton',
     'iAmRecorder',
     'iAmSipGateway',
+    'iAmSpot',
     'ignoreStartMuted',
     'inviteAppName',
     'liveStreaming.enabled',
@@ -182,6 +185,7 @@ export default [
     'mouseMoveCallbackInterval',
     'notifications',
     'notificationTimeouts',
+    'notifyOnConferenceDestruction',
     'openSharedDocumentOnJoin',
     'opusMaxAverageBitrate',
     'p2p.backToP2PDelay',
@@ -205,7 +209,10 @@ export default [
     'remoteVideoMenu',
     'roomPasswordNumberOfDigits',
     'readOnlyName',
-    'recordings',
+    'recordings.recordAudioAndVideo',
+    'recordings.showPrejoinWarning',
+    'recordings.showRecordingLink',
+    'recordings.suggestRecording',
     'replaceParticipant',
     'resolution',
     'screenshotCapture',
@@ -245,4 +252,4 @@ export default [
     'webrtcIceTcpDisable',
     'webrtcIceUdpDisable',
     'whiteboard.enabled'
-].concat(extraConfigWhitelist).concat(inIframe() ? inIframeConfigWhitelist : []);
+].concat(extraConfigWhitelist).concat(isEmbedded() ? isEmbeddedConfigWhitelist : []);
