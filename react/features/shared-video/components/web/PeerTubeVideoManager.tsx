@@ -25,7 +25,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         this.currentPlaybackState = PLAYBACK_STATUSES.PAUSED;
     }
 
-    async getPlaybackStatus() {
+    override async getPlaybackStatus() {
         let status;
     
         const iframe = document.getElementById('sharedVideoPlayer');
@@ -50,11 +50,11 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
 
-    isMuted() {
+    override isMuted() {
         return this._isMuted;
     }
 
-    getVolume() {
+    override getVolume() {
         return this._volume * 100;
     }
 
@@ -62,7 +62,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
     //     return this._currentTime;
     // }
 
-    async play() {
+    override async play() {
         if (!this.player) {
             logger.error('Player not initialized');
             return;
@@ -76,7 +76,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
     
-    async pause() {
+    override async pause() {
         if (!this.player) {
             logger.error('Player not initialized');
             return;
@@ -90,7 +90,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
 
-    async getTime(): Promise<number> {
+    override async getTime(): Promise<number> {
         if (!this.player) {
             logger.error('No player when getting current time:', this._currentTime);
             return -1;
@@ -106,7 +106,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
 
-    async seek(time: number) {
+    override async seek(time: number) {
         if (!this.player) {
             logger.error('Player not initialized');
             return;
@@ -120,7 +120,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
 
-    async mute() {
+    override async mute() {
         if (!this.player) {
             logger.error('Player not initialized');
             return;
@@ -134,7 +134,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
 
-    async unMute() {
+    override async unMute() {
         if (!this.player) {
             logger.error('Player not initialized');
             return;
@@ -148,7 +148,7 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     }
 
-    dispose() {
+    override dispose() {
         this.player = null;
     }
 
@@ -233,13 +233,13 @@ class PeerTubeVideoManager extends AbstractVideoManager {
         }
     };
 
-    componentDidMount() {
+    override componentDidMount() {
         super.componentDidMount();
         // Initialize player after component mounts
         this.onPlayerReady();
     }
 
-    render() {
+    override render() {
         const { videoId, _isOwner } = this.props;
         const showControls = _isOwner ? 1 : 1; // maybe one day we won't show the controls
 
