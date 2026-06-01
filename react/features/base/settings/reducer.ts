@@ -1,4 +1,3 @@
-// @ts-expect-error
 import { jitsiLocalStorage } from '@jitsi/js-utils';
 import { escape } from 'lodash-es';
 
@@ -51,8 +50,15 @@ const DEFAULT_STATE: ISettingsState = {
     userSelectedMicDeviceLabel: undefined
 };
 
+export interface IAudioSettings {
+    autoGainControl?: boolean;
+    channelCount?: 1 | 2;
+    echoCancellation?: boolean;
+    noiseSuppression?: boolean;
+}
 export interface ISettingsState {
     audioOutputDeviceId?: string;
+    audioSettings?: IAudioSettings;
     audioSettingsVisible?: boolean;
     avatarURL?: string;
     cameraDeviceId?: string | boolean;
@@ -66,6 +72,7 @@ export interface ISettingsState {
     localFlipX?: boolean;
     maxStageParticipants?: number;
     micDeviceId?: string | boolean;
+    previewAudioTrack?: any | null;
     serverURL?: string;
     showSubtitlesOnStage?: boolean;
     soundsIncomingMessage?: boolean;

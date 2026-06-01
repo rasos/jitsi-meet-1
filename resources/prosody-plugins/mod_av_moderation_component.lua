@@ -6,6 +6,7 @@ local room_jid_match_rewrite = util.room_jid_match_rewrite;
 local process_host_module = util.process_host_module;
 local table_shallow_copy = util.table_shallow_copy;
 local is_admin = util.is_admin;
+local is_focus = util.is_focus;
 local array = require "util.array";
 local json = require 'cjson.safe';
 local st = require 'util.stanza';
@@ -161,7 +162,7 @@ function start_av_moderation(room, mediaType, occupant)
 
     -- add all current moderators to the new whitelist
     for _, room_occupant in room:each_occupant() do
-        if room_occupant.role == 'moderator' and not ends_with(room_occupant.nick, '/focus') then
+        if room_occupant.role == 'moderator' and not is_focus(room_occupant.nick) then
             room.av_moderation[mediaType]:push(internal_room_jid_match_rewrite(room_occupant.nick));
         end
     end
@@ -203,7 +204,7 @@ function on_message(event)
         local room = get_room_by_name_and_subdomain(session.jitsi_web_query_room, session.jitsi_web_query_prefix);
 
         if not room then
-            module:log('warn', 'No room found found for %s/%s',
+            module:log('warn', 'No room found for %s/%s',
                     session.jitsi_web_query_prefix, session.jitsi_web_query_room);
             return false;
         end
@@ -352,6 +353,8 @@ function occupant_joined(event)
                 start_av_moderation(room, mediaType, occupant);
 
                 notify_occupants_enable(nil, true, room, occupant.nick, mediaType);
+
+                notify_whitelist_change(nil, true, room, mediaType);
             end
 
             room._data.av_first_moderator_joined = true;

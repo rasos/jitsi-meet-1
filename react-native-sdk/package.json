@@ -66,14 +66,13 @@
         "@react-native-google-signin/google-signin": "0.0.0",
         "@sayem314/react-native-keep-awake": "0.0.0",
         "react-native": "0.0.0",
-        "react": "*",
+        "react": "0.0.0",
         "react-native-background-timer": "0.0.0",
         "react-native-calendar-events": "0.0.0",
         "react-native-default-preference": "0.0.0",
         "react-native-device-info": "0.0.0",
         "react-native-get-random-values": "0.0.0",
         "react-native-gesture-handler": "0.0.0",
-        "react-native-immersive-mode": "0.0.0",
         "react-native-pager-view": "0.0.0",
         "react-native-performance": "0.0.0",
         "react-native-orientation-locker": "0.0.0",
@@ -83,9 +82,13 @@
         "react-native-splash-view": "0.0.0",
         "react-native-svg": "0.0.0",
         "react-native-video": "0.0.0",
-        "react-native-watch-connectivity": "0.0.0",
         "react-native-webrtc": "0.0.0",
-        "react-native-webview": "0.0.0"
+        "react-native-webview": "0.0.0",
+        "react-native-worklets-core": "0.0.0"
+    },
+    "devDependencies": {
+        "@babel/plugin-proposal-nullish-coalescing-operator": "0.0.0",
+        "@babel/plugin-proposal-optional-chaining": "0.0.0"
     },
     "scripts": {
         "postinstall": "node sdk_instructions.js",

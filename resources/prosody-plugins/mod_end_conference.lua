@@ -1,3 +1,10 @@
+-- Allows a conference moderator to destroy a MUC room by sending a message
+-- stanza containing an <end_conference/> child element to this component. The
+-- module looks up the room from the sender's jitsi_web_query_room / prefix
+-- session fields (set from the WebSocket URL query string by mod_jitsi_session),
+-- verifies the sender is an occupant with moderator role, and calls room:destroy().
+-- Must be loaded as a dedicated Prosody component (type "end_conference"); the
+-- muc_component option must point to the MUC component host.
 --
 -- Component "endconference.jitmeet.example.com" "end_conference"
 --     muc_component = muc.jitmeet.example.com
@@ -57,7 +64,7 @@ function on_message(event)
         local room = get_room_by_name_and_subdomain(session.jitsi_web_query_room, session.jitsi_web_query_prefix);
 
         if not room then
-            module:log('warn', 'No room found found for %s/%s',
+            module:log('warn', 'No room found for %s/%s',
                     session.jitsi_web_query_prefix, session.jitsi_web_query_room);
             return false;
         end

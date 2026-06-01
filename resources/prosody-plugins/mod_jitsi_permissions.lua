@@ -1,4 +1,23 @@
--- this is auto loaded by meeting_id
+-- Injects a <permissions> element into a participant's self-presence to
+-- communicate which features they are allowed to use.
+--
+-- The <permissions> element is only injected when the server is the authoritative
+-- source of that information.  When a participant authenticated with a JWT that
+-- already contains context.features, the client reads those features directly
+-- from the token; no <permissions> element is sent.  This means:
+--
+--   * Token user WITH context.features  → no injection (client uses token features)
+--   * Token user WITHOUT context.features, becomes moderator → inject default_permissions
+--   * Anonymous/non-token user, becomes moderator → inject default_permissions
+--   * Non-moderator of any kind → no injection
+--
+-- There is no mechanism for a client to explicitly request its permissions;
+-- <permissions> is only ever pushed by the server, either on the initial
+-- self-presence when a moderator joins (if the conditions above are met), or
+-- when an affiliation change triggers force_permissions_update (e.g. another
+-- moderator grants owner to this participant).
+--
+-- auto loaded by meeting_id
 local filters = require 'util.filters';
 local jid = require 'util.jid';
 
@@ -7,7 +26,7 @@ local is_admin = util.is_admin;
 local get_room_from_jid = util.get_room_from_jid;
 local is_healthcheck_room = util.is_healthcheck_room;
 local room_jid_match_rewrite = util.room_jid_match_rewrite;
-local ends_with = util.ends_with;
+local is_focus = util.is_focus;
 local presence_check_status = util.presence_check_status;
 
 local MUC_NS = 'http://jabber.org/protocol/muc';
@@ -70,7 +89,7 @@ function process_set_affiliation(event)
         return;
     end
 
-    if previous_affiliation == 'none' and affiliation == 'owner' then
+    if (previous_affiliation == 'none' or previous_affiliation == 'member') and affiliation == 'owner' then
         occupant_session.jitsi_meet_context_features = actor_session.jitsi_meet_context_features;
         if actor_session.jitsi_meet_context_user then
             occupant_session.granted_jitsi_meet_context_user_id = actor_session.jitsi_meet_context_user['id']
@@ -85,7 +104,7 @@ function process_set_affiliation(event)
         occupant_session.granted_jitsi_meet_context_group_id = nil;
 
         -- on revoke
-        if not session.auth_token then
+        if not occupant_session.auth_token then
             occupant_session.jitsi_meet_context_features = nil;
         end
     end
@@ -105,7 +124,7 @@ end
 -- using token that has features pre-defined (authentication is 'token').
 function filter_stanza(stanza, session)
     if not stanza.attr or not stanza.attr.to or stanza.name ~= 'presence'
-        or stanza.attr.type == 'unavailable' or ends_with(stanza.attr.from, '/focus') then
+        or stanza.attr.type == 'unavailable' or is_focus(stanza.attr.from) then
         return stanza;
     end
 

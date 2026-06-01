@@ -45,7 +45,15 @@ export function iAmVisitor(stateful: IStateful) {
  * @returns {number} - The number of visitors.
  */
 export function getVisitorsCount(stateful: IStateful) {
-    return toState(stateful)['features/visitors'].count ?? 0;
+    const state = toState(stateful);
+    const { hideVisitorCountForVisitors } = state['features/base/config'].visitors || {};
+    const isVisitor = state['features/visitors'].iAmVisitor;
+
+    if (isVisitor && hideVisitorCountForVisitors) {
+        return 0;
+    }
+
+    return state['features/visitors'].count ?? 0;
 }
 
 /**
@@ -138,4 +146,16 @@ export function shouldDisplayCurrentVisitorsList(stateful: IStateful): boolean {
     const state = toState(stateful);
 
     return isVisitorsListEnabled(state) && getVisitorsCount(state) > 0;
+}
+
+/**
+ * Returns display name, falling back to the default remote display name
+ * from config, or 'Fellow Jitster' if neither is available.
+ *
+ * @param {IReduxState} state - The Redux state.
+ * @param {string} [displayName] - Optional display name to use if available.
+ * @returns {string} - The display name.
+ */
+export function getDisplayName(state: IReduxState, displayName?: string): string {
+    return displayName || state['features/base/config'].defaultRemoteDisplayName || 'Fellow Jitster';
 }

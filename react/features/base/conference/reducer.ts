@@ -26,8 +26,6 @@ import {
     LOCK_STATE_CHANGED,
     P2P_STATUS_CHANGED,
     SET_ASSUMED_BANDWIDTH_BPS,
-    SET_FOLLOW_ME,
-    SET_FOLLOW_ME_RECORDER,
     SET_OBFUSCATED_ROOM,
     SET_PASSWORD,
     SET_PENDING_SUBJECT_CHANGE,
@@ -54,6 +52,7 @@ const DEFAULT_STATE = {
 };
 
 export interface IConferenceMetadata {
+    dialinEnabled?: boolean;
     files: {
         [fileId: string]: {
             authorParticipantJid: string;
@@ -68,6 +67,7 @@ export interface IConferenceMetadata {
         };
     };
     recording?: {
+        isRecordingRequested?: boolean;
         isTranscribingEnabled: boolean;
     };
     visitors?: {
@@ -107,6 +107,7 @@ export interface IJitsiConference {
     getParticipantById: Function;
     getParticipantCount: Function;
     getParticipants: Function;
+    getPolls: Function;
     getRole: Function;
     getShortTermCredentials: Function;
     getSpeakerStats: () => ISpeakerStats;
@@ -177,8 +178,6 @@ export interface IConferenceState {
     dataChannelOpen?: boolean;
     e2eeSupported?: boolean;
     error?: Error;
-    followMeEnabled?: boolean;
-    followMeRecorderEnabled?: boolean;
     joining?: IJitsiConference;
     leaving?: IJitsiConference;
     lobbyError?: boolean;
@@ -273,14 +272,6 @@ ReducerRegistry.register<IConferenceState>('features/base/conference',
 
             return set(state, 'assumedBandwidthBps', assumedBandwidthBps);
         }
-        case SET_FOLLOW_ME:
-            return set(state, 'followMeEnabled', action.enabled);
-
-        case SET_FOLLOW_ME_RECORDER:
-            return { ...state,
-                followMeRecorderEnabled: action.enabled,
-                followMeEnabled: action.enabled
-            };
 
         case SET_START_REACTIONS_MUTED:
             return set(state, 'startReactionsMuted', action.muted);

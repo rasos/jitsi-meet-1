@@ -91,7 +91,7 @@ const useStyles = makeStyles()(theme => {
             marginLeft: '6px',
 
             '& svg': {
-                fill: theme.palette.iconError
+                fill: theme.palette.settingsErrorIcon
             }
         },
 
@@ -196,10 +196,9 @@ const MicrophoneEntry = ({
             className = { classes.container }
             onClick = { onClick }
             onKeyPress = { onKeyPress }
-            role = 'radio'
+            role = 'menuitemradio'
             tabIndex = { 0 }>
             <ContextMenuItem
-                accessibilityLabel = { children }
                 icon = { isSelected ? IconCheck : undefined }
                 overflowType = { TEXT_OVERFLOW_TYPES.SCROLL_ON_HOVER }
                 selected = { isSelected }
